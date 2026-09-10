@@ -4,7 +4,6 @@ const api = axios.create({
   baseURL: '/api',
   headers: {
     'Accept': 'application/json',
-    'Content-Type': 'application/json',
   },
   validateStatus: function (status) {
     return status >= 200 && status < 300;

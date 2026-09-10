@@ -19,6 +19,8 @@
               <th>Estudiante</th>
               <th>Archivo</th>
               <th>Fecha de entrega</th>
+              <th>Nota</th>
+              <th>Observación</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -40,6 +42,8 @@
                 </a>
               </td>
               <td>{{ formatDate(entrega.fecha_entrega) }}</td>
+              <td>{{ entrega.nota ?? '-' }}</td>
+              <td>{{ entrega.observaciones ?? '-' }}</td>
               <td>
                 <button 
                   @click="descargarEntrega(entrega.id)" 

@@ -161,7 +161,6 @@ const tertiaryItems = [
   { name: 'Años Lectivos', path: '/admin/anos-lectivos', icon: '📅', description: 'Gestionar años escolares', count: computed(() => stats.value.total_school_years || 0) },
   { name: 'Grados', path: '/admin/grados', icon: '📚', description: 'Gestionar grados', count: computed(() => stats.value.total_grades) },
   { name: 'Materias', path: '/admin/materias', icon: '📖', description: 'Gestionar materias', count: computed(() => stats.value.total_subjects || 0) },
-  { name: 'Promociones', path: '/admin/promociones', icon: '🎓', description: 'Promover estudiantes', count: computed(() => stats.value.promotion_eligible) },
   { name: 'Actividad', path: '/admin/actividad', icon: '📜', description: 'Registro de acciones', count: computed(() => stats.value.total_activity_logs || 0) },
 ];
 </script>
@@ -195,7 +194,60 @@ const tertiaryItems = [
       </div>
     </div>
 
-    <!-- Cards de métricas -->
+    <!-- Tarjetas de navegación (primero) -->
+    <div class="nav-cards-section">
+      <div class="nav-cards-grid">
+      <!-- Sección principal -->
+      <router-link
+        v-for="item in primaryItems"
+        :key="item.path"
+        :to="item.path"
+        class="nav-card"
+        active-class="active"
+      >
+        <span class="nav-card-icon">{{ item.icon }}</span>
+        <div class="nav-card-text">
+          <span class="nav-card-name">{{ item.name }}</span>
+          <span class="nav-card-desc">{{ item.description }}</span>
+        </div>
+        <div v-if="item.count?.value !== null" class="nav-card-badge">{{ item.count }}</div>
+      </router-link>
+
+      <!-- Sección secundaria -->
+      <router-link
+        v-for="item in secondaryItems"
+        :key="item.path"
+        :to="item.path"
+        class="nav-card"
+        active-class="active"
+      >
+        <span class="nav-card-icon">{{ item.icon }}</span>
+        <div class="nav-card-text">
+          <span class="nav-card-name">{{ item.name }}</span>
+          <span class="nav-card-desc">{{ item.description }}</span>
+        </div>
+        <div v-if="item.count?.value !== null" class="nav-card-badge">{{ item.count }}</div>
+      </router-link>
+
+      <!-- Sección terciaria -->
+      <router-link
+        v-for="item in tertiaryItems"
+        :key="item.path"
+        :to="item.path"
+        class="nav-card"
+        active-class="active"
+      >
+        <span class="nav-card-icon">{{ item.icon }}</span>
+        <div class="nav-card-text">
+          <span class="nav-card-name">{{ item.name }}</span>
+          <span class="nav-card-desc">{{ item.description }}</span>
+        </div>
+        <div v-if="item.count?.value !== null" class="nav-card-badge">{{ item.count }}</div>
+      </router-link>
+    </div>
+    </div>
+
+    <!-- Cards de métricas (después) -->
     <div class="metrics-grid">
       <div
         v-for="(card, i) in metricCards"
@@ -211,60 +263,6 @@ const tertiaryItems = [
         </div>
       </div>
     </div>
-
-    <!-- Navegación existente -->
-    <div class="dashboard-content">
-      <nav class="nav nav-primary">
-        <router-link
-          v-for="item in primaryItems"
-          :key="item.path"
-          :to="item.path"
-          class="nav-item"
-          active-class="active"
-        >
-          <span class="nav-icon">{{ item.icon }}</span>
-          <div class="nav-text">
-            <span class="nav-name">{{ item.name }}</span>
-            <span class="nav-desc">{{ item.description }}</span>
-          </div>
-          <div class="count-badge">{{ item.count }}</div>
-        </router-link>
-      </nav>
-
-      <nav class="nav nav-secondary">
-        <router-link
-          v-for="item in secondaryItems"
-          :key="item.path"
-          :to="item.path"
-          class="nav-item"
-          active-class="active"
-        >
-          <span class="nav-icon">{{ item.icon }}</span>
-          <div class="nav-text">
-            <span class="nav-name">{{ item.name }}</span>
-            <span class="nav-desc">{{ item.description }}</span>
-          </div>
-          <div class="count-badge">{{ item.count }}</div>
-        </router-link>
-      </nav>
-    </div>
-
-    <nav class="nav nav-tertiary">
-      <router-link
-        v-for="item in tertiaryItems"
-        :key="item.path"
-        :to="item.path"
-        class="nav-item tertiary"
-        active-class="active"
-      >
-        <span class="nav-icon">{{ item.icon }}</span>
-        <div class="nav-text">
-          <span class="nav-name">{{ item.name }}</span>
-          <span class="nav-desc">{{ item.description }}</span>
-        </div>
-        <div class="count-badge tertiary">{{ item.count }}</div>
-      </router-link>
-    </nav>
 
     <!-- Error state -->
     <div v-if="error" class="error-fallback">
@@ -286,7 +284,8 @@ const tertiaryItems = [
   border: 1px solid #bbf7d0;
   border-radius: 8px;
   padding: 12px 20px;
-  margin-bottom: 16px;
+  margin-top: 24px;
+  margin-bottom: 24px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -299,52 +298,108 @@ const tertiaryItems = [
 
 /* ─── Alertas ───────────────────────────────────────────── */
 .alerts-section {
-  margin-bottom: 20px;
+  margin-top: 24px;
+  padding: 0 24px;
 }
 
 .alerts-title {
   font-size: 16px;
   color: #374151;
-  margin: 0 0 10px;
+  margin: 0 0 12px;
+  font-weight: 600;
 }
 
-.alerts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+/* ─── Tarjetas de navegación unificadas ──────────────────────── */
+.nav-cards-section {
+  padding: 0 24px;
+  margin-bottom: 40px;
+  margin-top: 32px;
 }
 
-.alert-item {
+.nav-cards-header {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 16px;
+}
+
+.nav-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.nav-cards-header {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 16px;
+}
+
+.nav-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  padding: 0 24px 24px;
+}
+
+.nav-card {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  border-radius: 8px;
-  border: 1px solid;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  gap: 16px;
+  padding: 20px 24px;
+  background: white;
+  border-radius: 16px;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.25s ease;
+  min-height: 100px;
+  border-left: 5px solid #10b981;
 }
 
-.alert-item:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+.nav-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
-.alert-item.warning {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #92400e;
+.nav-card.active {
+  border: 2px solid #10b981;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
 
-.alert-item.danger {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #dc2626;
+.nav-card-icon {
+  font-size: 28px;
+  flex-shrink: 0;
 }
 
-.alert-item.info {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-  color: #1e40af;
+.nav-card-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.nav-card-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.nav-card-desc {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.nav-card-badge {
+  background: linear-gradient(135deg, #10b981, #34d399);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  min-width: 28px;
+  text-align: center;
 }
 
 .alert-item.success {
@@ -361,19 +416,22 @@ const tertiaryItems = [
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 20px;
+  margin-top: 40px;
+  padding: 0 24px;
 }
 
 .metric-card {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px 20px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  gap: 16px;
+  padding: 24px 28px;
+  border-radius: 16px;
+  border: none;
   background: white;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  min-height: 110px;
 }
 
 .metric-card.clickable {
@@ -381,33 +439,47 @@ const tertiaryItems = [
 }
 
 .metric-card.clickable:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
 }
 
-.metric-card.green { border-left: 4px solid #22c55e; }
-.metric-card.blue { border-left: 4px solid #3b82f6; }
-.metric-card.red { border-left: 4px solid #ef4444; }
-.metric-card.yellow { border-left: 4px solid #f59e0b; }
-.metric-card.gray { border-left: 4px solid #9ca3af; }
+.metric-card.green { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left: 5px solid #10b981; }
+.metric-card.blue { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-left: 5px solid #3b82f6; }
+.metric-card.red { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-left: 5px solid #ef4444; }
+.metric-card.yellow { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-left: 5px solid #f59e0b; }
+.metric-card.gray { background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border-left: 5px solid #9ca3af; }
 
-.metric-icon { font-size: 28px; }
+.metric-icon { 
+  font-size: 32px; 
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .metric-info {
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
 }
 
 .metric-value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
   color: #111827;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .metric-label {
   font-size: 13px;
   color: #6b7280;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 /* ─── Error fallback ────────────────────────────────────── */

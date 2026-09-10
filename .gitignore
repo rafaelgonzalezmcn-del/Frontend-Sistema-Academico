@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Backups - Archivos de respaldo
+*.backup
+*.bak
+*.old
+*backup*
+*copy*
+*copia*

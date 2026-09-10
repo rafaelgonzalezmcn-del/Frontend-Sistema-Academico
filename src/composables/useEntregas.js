@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import EntregaService from '@/services/EntregaService';
+import { toast } from '@/services/ToastService';
 
 export function useEntregas() {
   // Esta variable ya no se usa directamente - ahora devolvemos datos en fetchAllEntregasResumen
@@ -22,6 +23,8 @@ export function useEntregas() {
         return { resumen: data.resumen };
       }
     } catch (e) {
+      // FASE 1.1: Notificar error al usuario en lugar de silencio
+      toast.showFromError(e);
       return null;
     }
   };

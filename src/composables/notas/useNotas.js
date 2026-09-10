@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue';
 import { apiNormalized } from '@/services/apiNormalized';
 import { useEntregas } from '@/composables/useEntregas';
+import { toast } from '@/services/ToastService';
 
 export function useNotas() {
   const { entregasResumen, fetchEntregasResumen, fetchAllEntregasResumen } = useEntregas();
@@ -30,7 +31,8 @@ export function useNotas() {
       // parciales es un campo especial en la respuesta raw
       notasParciales.value = response.raw?.data?.parciales || [];
     } catch (e) {
-      console.error('Error cargando notas:', e);
+      // FASE 1.1: Notificar error al usuario en lugar de solo console.error
+      toast.showFromError(e);
       notasData.value = [];
       notasParciales.value = [];
     } finally {
@@ -81,7 +83,8 @@ export function useNotas() {
         }
       }
     } catch (e) {
-      console.error('Error cargando tareas de parámetros:', e);
+      // FASE 1.1: Notificar error al usuario en lugar de solo console.error
+      toast.showFromError(e);
     }
   };
 

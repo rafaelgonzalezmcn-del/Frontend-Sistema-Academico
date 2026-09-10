@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useTareas } from '@/composables/tareas/useTareas';
 import { useParciales } from '@/composables/useParciales';
@@ -15,7 +15,8 @@ const props = defineProps({
     type: String,
     default: 'profesor',
     validator: (v) => ['profesor', 'estudiante'].includes(v)
-  }
+  },
+  tareaIdSeleccionada: { type: Number, default: null }
 });
 
 const emit = defineEmits(['verEntregas']);
@@ -58,6 +59,41 @@ const {
 
 const { parciales, parametros, loadingParciales, cargarParciales, cargarParametros } = useParciales();
 
+const modulosColapsados = ref({});
+
+// Abrir automáticamente la tarea seleccionada
+const openSelectedTarea = async () => {
+  if (!props.tareaIdSeleccionada || !modulosRef.value?.length) return;
+  
+  // Buscar el módulo de la tarea
+  for (const modulo of modulosRef.value) {
+    if (!modulo.tareas) continue;
+    const tarea = modulo.tareas.find(t => t.id === props.tareaIdSeleccionada);
+    if (tarea) {
+      // Expandir el módulo si está colapsado
+      if (modulosColapsados.value[modulo.id] === false) {
+        modulosColapsados.value[modulo.id] = true;
+      }
+      // Abrir para edición solo si es profesor
+      if (isProfesor.value) {
+        startEditTarea(tarea);
+      }
+      break;
+    }
+  }
+};
+
+onMounted(async () => {
+  await fetchAllTareas();
+});
+
+// Observar cambios en la tarea seleccionada
+watch(() => props.tareaIdSeleccionada, (newTareaId) => {
+  if (newTareaId) {
+    openSelectedTarea();
+  }
+});
+
 const handleParcialChange = async () => {
   newTareaParametroId.value = null;
   parametros.value = [];
@@ -82,6 +118,8 @@ const handleEditParcialChange = async () => {
 };
 
 const submitCreate = async () => {
+  console.log('TareasSection submitCreate llamado');
+  console.log('TareasSection newTareaArchivo:', newTareaArchivo.value);
   try {
     await createTarea();
   } catch (e) {
@@ -279,7 +317,8 @@ onMounted(async () => {
                         </span>
                       </div>
                       <span class="estado-badge" :class="tarea.estado">
-                        {{ tarea.estado === 'vencida' ? '🔴 Vencida' : '🟡 Pendiente' }}
+                        <template v-if="tarea.ha_entregado">✅ Entregado</template>
+                        <template v-else>{{ tarea.estado === 'vencida' ? '🔴 Vencida' : '🟡 Pendiente' }}</template>
                       </span>
                     </div>
 

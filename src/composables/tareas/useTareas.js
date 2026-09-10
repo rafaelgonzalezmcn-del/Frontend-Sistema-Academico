@@ -3,6 +3,7 @@ import api from '@/services/api';
 import { getData, getListData } from '@/utils/responseHelper';
 import { useEntregas } from '@/composables/useEntregas';
 import { useParciales } from '@/composables/useParciales';
+import { toast } from '@/services/ToastService';
 
 export function useTareas(modulos) {
   const { entregasResumen, fetchEntregasResumen, fetchAllEntregasResumen } = useEntregas();
@@ -45,7 +46,8 @@ export function useTareas(modulos) {
       // Compatible con ambos formatos (antiguo y nuevo)
       tareas.value[moduloId] = getListData(response);
     } catch (e) {
-      console.error('Error fetching tareas:', e);
+      // FASE 1.1: Notificar error al usuario en lugar de solo console.error
+      toast.showFromError(e);
     }
   };
 
@@ -97,9 +99,18 @@ export function useTareas(modulos) {
       formData.append('puntaje_maximo', newTareaPuntajeMaximo.value);
       if (newTareaParcialId.value) formData.append('parcial_id', newTareaParcialId.value);
       if (newTareaParametroId.value) formData.append('parametro_id', newTareaParametroId.value);
-      if (newTareaArchivo.value) formData.append('archivo', newTareaArchivo.value);
+      
+      console.log('useTareas createTarea - Archivo:', newTareaArchivo.value);
+      console.log('useTareas createTarea - Es archivo?', newTareaArchivo.value instanceof File);
+      
+      if (newTareaArchivo.value) {
+        formData.append('archivo', newTareaArchivo.value);
+        console.log('useTareas createTarea - Archivo agregado al formData');
+      }
 
+      console.log('useTareas createTarea - Enviando POST a /tareas');
       const response = await api.post('/tareas', formData);
+      console.log('useTareas createTarea - Respuesta:', response);
       
       if (!tareas.value[newTareaModuloId.value]) {
         tareas.value[newTareaModuloId.value] = [];
@@ -111,7 +122,9 @@ export function useTareas(modulos) {
       resetNewTareaForm();
       return newTarea;
     } catch (e) {
-      console.error('Error creating tarea:', e);
+      // FASE 1.1: Notificar error al usuario (se relanza para que el componente maneje)
+      console.error('useTareas createTarea - Error:', e.response?.data || e.message);
+      toast.showFromError(e);
       throw e;
     } finally {
       savingTarea.value = false;
@@ -147,7 +160,8 @@ export function useTareas(modulos) {
       }
       return updatedTarea;
     } catch (e) {
-      console.error('Error updating tarea:', e);
+      // FASE 1.1: Notificar error al usuario
+      toast.showFromError(e);
       throw e;
     } finally {
       savingTarea.value = false;
@@ -159,7 +173,8 @@ export function useTareas(modulos) {
       await api.delete(`/tareas/${tareaId}`);
       tareas.value[moduloId] = tareas.value[moduloId].filter(t => t.id !== tareaId);
     } catch (e) {
-      console.error('Error deleting tarea:', e);
+      // FASE 1.1: Notificar error al usuario
+      toast.showFromError(e);
       throw e;
     }
   };
@@ -189,7 +204,8 @@ export function useTareas(modulos) {
         const response = await api.get(`/parciales/${tarea.parcial_id}/parametros`);
         parametrosEdicion.value = getListData(response);
       } catch (e) {
-        console.error('Error cargando parámetros para edición:', e);
+        // FASE 1.1: Notificar error al usuario
+        toast.showFromError(e);
         parametrosEdicion.value = [];
       }
     } else {

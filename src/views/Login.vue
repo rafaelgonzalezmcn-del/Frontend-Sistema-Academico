@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '../composables/useAuth';
+import { validateRequired, validateEmail } from '../utils/validations';
 
 const router = useRouter();
 const { login, isAuthenticated, user, fetchUser } = useAuth();
@@ -12,7 +13,40 @@ const showPassword = ref(false);
 const loading = ref(false);
 const error = ref('');
 
+// Errores de validación
+const emailError = ref('');
+const passwordError = ref('');
+
+const validateLoginForm = () => {
+  let isValid = true;
+  
+  // Validar email
+  const emailValidation = validateRequired(email.value, 'El correo') || validateEmail(email.value);
+  if (emailValidation) {
+    emailError.value = emailValidation;
+    isValid = false;
+  } else {
+    emailError.value = '';
+  }
+  
+  // Validar password
+  const passwordValidation = validateRequired(password.value, 'La contraseña');
+  if (passwordValidation) {
+    passwordError.value = passwordValidation;
+    isValid = false;
+  } else {
+    passwordError.value = '';
+  }
+  
+  return isValid;
+};
+
 const handleLogin = async () => {
+  // FASE 2.2: Validar antes de submit
+  if (!validateLoginForm()) {
+    return;
+  }
+  
   loading.value = true;
   error.value = '';
   
@@ -73,9 +107,10 @@ onMounted(async () => {
           <input 
             v-model="email" 
             type="email" 
-            required 
             placeholder="correo@ejemplo.com"
+            :class="{ 'input-error': emailError }"
           />
+          <p v-if="emailError" class="field-error">{{ emailError }}</p>
         </div>
         
         <div class="form-group">
@@ -84,8 +119,8 @@ onMounted(async () => {
             <input 
               v-model="password" 
               :type="showPassword ? 'text' : 'password'" 
-              required 
               placeholder="••••••••"
+              :class="{ 'input-error': passwordError }"
             />
             <button 
               type="button" 
@@ -96,6 +131,7 @@ onMounted(async () => {
               <span v-else>👁️‍🗨️</span>
             </button>
           </div>
+          <p v-if="passwordError" class="field-error">{{ passwordError }}</p>
         </div>
         
         <button type="submit" :disabled="loading" class="login-btn">
@@ -211,8 +247,32 @@ input:focus {
 }
 
 .login-btn:disabled {
-  background: #ccc;
+  background: #a0d9c0;
   cursor: not-allowed;
+}
+
+.error {
+  color: #dc3545;
+  text-align: center;
+  margin-top: 10px;
+  padding: 10px;
+  background: #f8d7da;
+  border-radius: 4px;
+}
+
+/* FASE 2.2: Estilos para validación de campos */
+.field-error {
+  color: #dc3545;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.input-error {
+  border-color: #dc3545 !important;
+}
+
+.input-error:focus {
+  border-color: #dc3545;
 }
 
 .error {

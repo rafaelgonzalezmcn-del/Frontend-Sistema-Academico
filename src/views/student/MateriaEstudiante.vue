@@ -74,7 +74,7 @@
                 <div class="module-title-section">
                   <h3 class="module-title">
                     📦 {{ modulo.nombre }}
-                    <span class="material-count">({{ modulo.materiales?.length || 0 }} archivos)</span>
+                    <span class="material-count">({{ modulo.materiales?.length || 0 }} archivos, {{ modulo.tareas?.length || 0 }} tareas)</span>
                   </h3>
                   <p v-if="modulo.descripcion" class="module-description">
                     {{ modulo.descripcion }}
@@ -108,6 +108,30 @@
                   No hay materiales disponibles
                 </div>
               </div>
+              
+              <!-- Lista de tareas -->
+              <div v-if="modulo.tareas && modulo.tareas.length > 0" class="tareas-list">
+                <div 
+                  v-for="tarea in modulo.tareas" 
+                  :key="tarea.id" 
+                  class="tarea-card"
+                >
+                  <div class="tarea-card-header">
+                    <span class="tarea-icon">📝</span>
+                    <span class="tarea-title">{{ tarea.titulo }}</span>
+                  </div>
+                  <div class="tarea-card-body">
+                    <div class="tarea-info-row">
+                      <span class="tarea-fecha">📅 Límite: {{ formatDate(tarea.fecha_limite) }}</span>
+                    </div>
+                    <div class="tarea-status">
+                      <span v-if="tarea.ha_entregado && tarea.mi_entrega?.nota" class="tarea-nota">Calificación: {{ tarea.mi_entrega.nota }}/{{ tarea.puntaje_maximo }}</span>
+                      <span v-else-if="tarea.ha_entregado" class="badge badge-success">✓ Entregado</span>
+                      <span v-else class="badge badge-warning">⏳ Pendiente</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -128,7 +152,7 @@
           >
             <div class="participante-avatar">
               <img v-if="getSelfieUrl(participante.id)" :src="getSelfieUrl(participante.id)" alt="Avatar" class="avatar-img" />
-              <span v-else>{{ getInitials(participante.nombre) }}</span>
+              <span v-else>{{ getIniciales(participante.nombre) }}</span>
             </div>
             <div class="participante-info">
               <h4 class="participante-nombre">
@@ -182,7 +206,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import { apiNormalized, api as apiRaw } from '@/services/apiNormalized';
-import { formatFileSize } from '@/utils/formatters';
+import { formatFileSize, getIniciales } from '@/utils/formatters';
 
 // Componentes compartidos
 import NotasSection from '@/views/shared/components/notas/NotasSection.vue';
@@ -238,13 +262,7 @@ watch(participantes, loadAllSelfies, { immediate: true });
 // ID reactivo de la materia
 const materiaId = computed(() => route.params.id);
 
-// Funciones de utilidad
-const getInitials = (name) => {
-  if (!name) return '?';
-  const parts = name.split(' ');
-  return parts.slice(0, 2).map(p => p[0]).join('').toUpperCase();
-};
-
+// getIniciales importado desde formatters.js
 const getBadgeClass = (rol) => {
   if (rol === 'profesor' || rol === 'professor') return 'badge-profesor';
   if (rol === 'estudiante' || rol === 'student') return 'badge-estudiante';
@@ -290,6 +308,12 @@ const verPerfil = (id) => {
   router.push(`/perfil/${id}`);
 };
 
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
 // Fetch functions
 const fetchMateria = async () => {
   if (!materiaId.value) return;
@@ -305,9 +329,19 @@ const fetchMateria = async () => {
 const fetchModulos = async () => {
   if (!materiaId.value) return;
   try {
-    // El servicio ahora devuelve respuesta normalizada
+    // Cargar módulos
     const response = await apiNormalized.get(`/materias/${materiaId.value}/modulos`);
     modulos.value = response.data || [];
+    
+    // Cargar tareas para cada módulo
+    for (const modulo of modulos.value) {
+      try {
+        const tareasResponse = await apiNormalized.get(`/modulos/${modulo.id}/tareas`);
+        modulo.tareas = tareasResponse.data || [];
+      } catch (e) {
+        modulo.tareas = [];
+      }
+    }
   } catch (err) {
     modulos.value = [];
   }
@@ -345,5 +379,89 @@ onMounted(async () => {
 
 .empty-state p {
   color: #94a3b8;
+}
+
+.tareas-list {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tarea-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tarea-card:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.tarea-nota {
+  font-weight: 600;
+  color: #166534;
+  background: #dcfce7;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.tarea-card.tarea-seleccionada {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+.tarea-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tarea-icon {
+  font-size: 16px;
+}
+
+.tarea-title {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.tarea-card-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tarea-info-row {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.tarea-status {
+  font-size: 12px;
+}
+
+.badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.badge-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-warning {
+  background: #fef3c7;
+  color: #92400e;
 }
 </style>

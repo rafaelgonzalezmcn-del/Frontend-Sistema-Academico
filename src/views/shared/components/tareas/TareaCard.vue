@@ -42,7 +42,8 @@ const getArchivoTamano = () => {
             >
               {{ formatFecha(tarea.fecha_limite) }}
               <span class="estado-badge" :class="tarea.estado">
-                {{ tarea.estado === 'vencida' ? '🔴 Vencida' : '🟡 Pendiente' }}
+                <template v-if="tarea.ha_entregado">✅ Entregado</template>
+                <template v-else>{{ tarea.estado === 'vencida' ? '🔴 Vencida' : '🟡 Pendiente' }}</template>
               </span>
             </span>
           </div>

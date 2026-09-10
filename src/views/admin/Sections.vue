@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { apiNormalized as api } from '../../services/apiNormalized';
+import apiRaw from '../../services/api';
 import SelectorModal from '../../components/SelectorModal.vue';
 
 const sections = ref([]);
@@ -29,11 +30,50 @@ const enrollForm = ref({
 });
 
 const searchQuery = ref('');
+const filterGrade = ref('');
+const filterSchoolYear = ref('');
+const studentSearchQuery = ref(''); // Separate for enrollment modal
+const currentPage = ref(1);
+const perPage = 15;
+
+// Paginación client-side sobre datos filtrados
+const paginatedSections = computed(() => {
+  const filtered = filteredSections.value;
+  const start = (currentPage.value - 1) * perPage;
+  const end = start + perPage;
+  return filtered.slice(start, end);
+});
+
+const lastPage = computed(() => Math.ceil(filteredSections.value.length / perPage));
+
+const totalCount = computed(() => filteredSections.value.length);
+
+const goToPage = (page) => {
+  if (page >= 1 && page <= lastPage.value) {
+    currentPage.value = page;
+  }
+};
+
+const prevPage = () => goToPage(currentPage.value - 1);
+const nextPage = () => goToPage(currentPage.value + 1);
+
+// Números de página visibles (más completo como Users.vue)
+const visiblePages = computed(() => {
+  const pages = [];
+  const maxVisible = 5;
+  let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2));
+  let end = Math.min(lastPage.value, start + maxVisible - 1);
+  if (end - start < maxVisible - 1) start = Math.max(1, end - maxVisible + 1);
+  for (let i = start; i <= end; i++) pages.push(i);
+  return pages;
+});
+
 const fetchData = async () => {
   loading.value = true;
+  currentPage.value = 1;
   try {
     const [sectionsRes, gradesRes, yearsRes] = await Promise.all([
-      api.get('/sections'),
+      api.get('/sections', { params: { per_page: 100 } }),
       api.get('/grades'),
       api.get('/school-years')
     ]);
@@ -57,9 +97,10 @@ const fetchStudents = async (sectionId) => {
     console.log('Enrolled students:', enrollForm.value.enrolledStudents);
 
     // Obtener estudiantes disponibles (sin sección o en otra sección)
-    const availableRes = await api.get('/users', { params: { role: 'estudiante' } });
+    // Obtener todos los usuarios con rol estudiante (sin paginación)
+    const availableRes = await apiRaw.get('/users', { params: { role: 'estudiante', per_page: 100 } });
     console.log('Available response:', availableRes);
-    const allStudents = availableRes.data || [];
+    const allStudents = availableRes.data?.data || availableRes.data || [];
     console.log('All students', allStudents);
     
     // Filtrar estudiantes que no están en esta sección
@@ -71,9 +112,45 @@ const fetchStudents = async (sectionId) => {
   }
 };
 
+const filteredSections = computed(() => {
+  let result = sections.value;
+  
+  // Filtrar por nombre
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    result = result.filter(s => 
+      s.name.toLowerCase().includes(query)
+    );
+  }
+  
+  // Filtrar por grado
+  if (filterGrade.value) {
+    result = result.filter(s => s.grade_id == filterGrade.value);
+  }
+  
+  // Filtrar por año lectivo
+  if (filterSchoolYear.value) {
+    result = result.filter(s => s.school_year_id == filterSchoolYear.value);
+  }
+  
+  // Reset page when filters change
+  return result;
+});
+
+// Reset page when filters change
+const resetPageOnFilterChange = () => {
+  currentPage.value = 1;
+};
+
+// Watch section filters - reset to page 1 when filter changes 
+// (user is intentionally filtering, so start from beginning)
+watch([searchQuery, filterGrade, filterSchoolYear], () => {
+  currentPage.value = 1;
+});
+
 const filteredAvailableStudents = computed(() => {
-  if (!searchQuery.value) return enrollForm.value.availableStudents;
-  const query = searchQuery.value.toLowerCase();
+  if (!studentSearchQuery.value) return enrollForm.value.availableStudents;
+  const query = studentSearchQuery.value.toLowerCase();
   return enrollForm.value.availableStudents.filter(s => 
     (s.first_name && s.first_name.toLowerCase().includes(query)) ||
     (s.last_name && s.last_name.toLowerCase().includes(query)) ||
@@ -92,22 +169,25 @@ const closeEnrollModal = () => {
   selectedSection.value = null;
   enrollForm.value.selectedAvailable = [];
   enrollForm.value.selectedEnrolled = [];
+  studentSearchQuery.value = '';
 };
 
 const enrollStudent = async (studentId) => {
   try {
-    await api.patch(`/users/${studentId}/assign-section`, { section_id: selectedSection.value.id });
+    await apiRaw.patch(`/users/${studentId}/assign-section`, { section_id: selectedSection.value.id });
     await fetchStudents(selectedSection.value.id);
   } catch (e) {
-    if (e.response?.status === 409) {
-      // Estudiante ya matriculado, mostrar confirmación
+    const status = e.response?.status;
+    const data = e.response?.data;
+    
+    if (status === 409) {
       confirmData.value = {
         student: enrollForm.value.availableStudents.find(s => s.id === studentId),
-        currentSection: e.response.data.current_section
+        currentSection: data?.current_section
       };
       showConfirmModal.value = true;
     } else {
-      error.value = e.response?.data?.message || 'Error al matricular';
+      error.value = data?.message || 'Error al matricular';
     }
   }
 };
@@ -217,7 +297,38 @@ onMounted(fetchData);
     <div v-if="error" class="error-message">{{ error }}</div>
     <div v-if="loading" class="loading">Cargando...</div>
     
-    <table v-else class="data-table">
+    <!-- Filtros -->
+    <div class="filters-section">
+      <div class="filter-group">
+        <input 
+          v-model="searchQuery" 
+          type="text" 
+          placeholder="Buscar por nombre..." 
+          class="filter-input"
+        />
+      </div>
+      <div class="filter-group">
+        <select v-model="filterGrade" class="filter-select">
+          <option value="">Todos los grados</option>
+          <option v-for="grade in grades" :key="grade.id" :value="grade.id">
+            {{ grade.name }}
+          </option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <select v-model="filterSchoolYear" class="filter-select">
+          <option value="">Todos los años lectivos</option>
+          <option v-for="year in schoolYears" :key="year.id" :value="year.id">
+            {{ year.name }}
+          </option>
+        </select>
+      </div>
+      <button @click="searchQuery = ''; filterGrade = ''; filterSchoolYear = ''" class="btn-secondary btn-sm">
+        Limpiar
+      </button>
+    </div>
+    
+    <table v-if="!loading && !error" class="data-table">
       <thead>
         <tr>
           <th>Nombre</th>
@@ -228,7 +339,7 @@ onMounted(fetchData);
         </tr>
       </thead>
       <tbody>
-        <tr v-for="item in sections" :key="item.id">
+        <tr v-for="item in paginatedSections" :key="item.id">
           <td>{{ item.name }}</td>
           <td>{{ item.grade?.name || getGradeName(item.grade_id) }}</td>
           <td>{{ item.school_year?.name || getSchoolYearName(item.school_year_id) }}</td>
@@ -246,6 +357,67 @@ onMounted(fetchData);
         </tr>
       </tbody>
     </table>
+    
+    <!-- Paginación -->
+    <div v-if="lastPage > 1" class="pagination-container">
+      <div class="pagination-info">
+        Mostrando {{ paginatedSections.length }} de {{ totalCount }} secciones
+        <span>— Página {{ currentPage }} de {{ lastPage }}</span>
+      </div>
+      <div class="pagination-controls">
+        <button
+          @click="prevPage"
+          :disabled="currentPage === 1"
+          class="btn-pagination"
+          :class="{ disabled: currentPage === 1 }"
+        >
+          &laquo; Anterior
+        </button>
+
+        <button
+          v-if="visiblePages[0] > 1"
+          @click="goToPage(1)"
+          class="btn-pagination"
+          :class="{ active: currentPage === 1 }"
+        >
+          1
+        </button>
+        <span v-if="visiblePages[0] > 2" class="pagination-ellipsis">...</span>
+
+        <button
+          v-for="page in visiblePages"
+          :key="page"
+          @click="goToPage(page)"
+          class="btn-pagination"
+          :class="{ active: page === currentPage }"
+        >
+          {{ page }}
+        </button>
+
+        <span v-if="visiblePages[visiblePages.length - 1] < lastPage - 1" class="pagination-ellipsis">...</span>
+        <button
+          v-if="visiblePages[visiblePages.length - 1] < lastPage"
+          @click="goToPage(lastPage)"
+          class="btn-pagination"
+          :class="{ active: currentPage === lastPage }"
+        >
+          {{ lastPage }}
+        </button>
+
+        <button
+          @click="nextPage"
+          :disabled="currentPage === lastPage"
+          class="btn-pagination"
+          :class="{ disabled: currentPage === lastPage }"
+        >
+          Siguiente &raquo;
+        </button>
+      </div>
+    </div>
+    
+    <div v-else-if="totalCount === 0 && !loading" class="empty-list">
+      No hay secciones que mostrar
+    </div>
     
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
@@ -302,7 +474,7 @@ onMounted(fetchData);
             <div class="student-list">
               <h4>Estudiantes Disponibles</h4>
               <input 
-                v-model="searchQuery" 
+                v-model="studentSearchQuery" 
                 type="text" 
                 placeholder="Buscar por cédula, nombre o apellido..."
                 class="search-input"
@@ -313,6 +485,9 @@ onMounted(fetchData);
                   <div class="student-info">
                     <span class="student-name">{{ student.first_name }} {{ student.last_name }}</span>
                     <span class="student-id">{{ student.identification_number }}</span>
+                    <span v-if="student.section_id" class="current-section-badge">
+                      {{ student.section?.name || 'Sección #' + student.section_id }}
+                    </span>
                   </div>
                   <button @click="enrollStudent(student.id)" class="btn-primary btn-sm">Matricular</button>
                 </div>
@@ -345,19 +520,20 @@ onMounted(fetchData);
     <div v-if="showConfirmModal" class="modal-overlay" @click.self="cancelEnrollment">
       <div class="modal confirm-modal">
         <div class="modal-header warning-header">
-          <h3>⚠️ Estudiante ya matriculado</h3>
+          <h3>⚠️ Reasignar Estudiante</h3>
         </div>
         <div class="modal-body">
-          <p>El estudiante <strong>{{ confirmData.student?.first_name }} {{ confirmData.student?.last_name }}</strong> ({{ confirmData.student?.identification_number }})</p>
-          <p>ya está matriculado en:</p>
+          <p>El estudiante <strong>{{ confirmData.student?.first_name }} {{ confirmData.student?.last_name }}</strong></p>
+          <p>Identificación: {{ confirmData.student?.identification_number }}</p>
+          <p class="warning-text">Ya está matriculado actualmente en:</p>
           <div class="current-enrollment-info">
-            <strong>{{ confirmData.currentSection?.grade }}</strong> - {{ confirmData.currentSection?.name }}
+            <strong>{{ confirmData.currentSection?.name }}</strong> - {{ confirmData.currentSection?.grade }}
           </div>
-          <p>¿Deseas matricularlo en <strong>{{ selectedSection?.grade?.name }} - {{ selectedSection?.name }}</strong>?</p>
+          <p class="action-text">¿Deseas cambiarlo a <strong>{{ selectedSection?.name }}</strong>?</p>
         </div>
         <div class="modal-footer">
           <button @click="cancelEnrollment" class="btn-cancel">Cancelar</button>
-          <button @click="confirmEnrollment" class="btn-warning">Confirmar Matrícula</button>
+          <button @click="confirmEnrollment" class="btn-warning">Confirmar Cambio</button>
         </div>
       </div>
     </div>
@@ -387,6 +563,125 @@ onMounted(fetchData);
   background: #f3f4f6;
   color: #6b7280;
   font-style: italic;
+}
+
+.warning-text {
+  color: #dc2626;
+  font-weight: 600;
+  margin-top: 12px;
+}
+
+.action-text {
+  color: #059669;
+  font-weight: 600;
+  margin-top: 12px;
+}
+
+.current-section-badge {
+  display: inline-block;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  margin-left: 8px;
+}
+
+.filters-section {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  flex: 1;
+  min-width: 150px;
+}
+
+.filter-input,
+.filter-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.empty-list {
+  text-align: center;
+  padding: 32px;
+  color: #9ca3af;
+}
+
+/* ─── Paginación ──────────────────────────────────────────── */
+.pagination-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 16px 0;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #666;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-pagination {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #374151;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-pagination:hover:not(.disabled):not(.active) {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.btn-pagination.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.btn-pagination.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination-ellipsis {
+  padding: 0 4px;
+  color: #9ca3af;
+  font-size: 14px;
 }
 </style>
 

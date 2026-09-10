@@ -262,7 +262,7 @@ const fetchData = async () => {
       api.get('/class-schedules'),
       api.get('/teachers'),
       api.get('/subjects'),
-      api.get('/sections'),
+      api.get('/sections?per_page=100'),
       api.get('/school-years?per_page=100'),
       api.get('/grades')
     ]);

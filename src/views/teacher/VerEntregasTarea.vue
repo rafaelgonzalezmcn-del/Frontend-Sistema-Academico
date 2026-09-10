@@ -61,6 +61,7 @@
             <th>Fecha de entrega</th>
             <th>Archivo</th>
             <th>Nota</th>
+            <th>Observación</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -105,6 +106,12 @@
                 <span v-else class="text-muted">-</span>
               </td>
               <td>
+                <span v-if="item?.entrega?.observaciones" class="text-muted" :title="item.entrega.observaciones">
+                  {{ item.entrega.observaciones.length > 30 ? item.entrega.observaciones.substring(0, 30) + '...' : item.entrega.observaciones }}
+                </span>
+                <span v-else class="text-muted">-</span>
+              </td>
+              <td>
                 <div class="acciones-botones">
                   <button 
                     v-if="item?.ha_entregado" 
@@ -126,7 +133,7 @@
             
             <!-- Fila inline para calificar - ahora dentro del v-for, item accesible -->
             <tr v-if="editandoId === item?.estudiante?.id" class="fila-calificacion">
-              <td colspan="8">
+              <td colspan="9">
                 <div class="calificacion-inline">
                   <div class="calificacion-campos">
                     <div class="mb-2">

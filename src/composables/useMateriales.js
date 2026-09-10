@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { apiNormalized, api } from '@/services/apiNormalized';
+import { toast } from '@/services/ToastService';
 
 export function useMateriales() {
   const materialCounts = ref({});
@@ -18,19 +19,34 @@ export function useMateriales() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       return response.data;
+    } catch (e) {
+      // FASE 1.1: Notificar error al usuario
+      toast.showFromError(e);
+      throw e;
     } finally {
       uploadingFile.value = false;
     }
   };
 
   const deleteMaterial = async (materialId) => {
-    await apiNormalized.delete(`/materiales/${materialId}`);
+    try {
+      await apiNormalized.delete(`/materiales/${materialId}`);
+    } catch (e) {
+      // FASE 1.1: Notificar error al usuario
+      toast.showFromError(e);
+      throw e;
+    }
   };
 
   const downloadMaterial = async (materialId) => {
-    // Usa api raw (no normalizado) porque es un endpoint especial de descarga
-    const response = await api.get(`/materiales/${materialId}/descargar`);
-    window.open(response.data.download_url, '_blank');
+    try {
+      // Usa api raw (no normalizado) porque es un endpoint especial de descarga
+      const response = await api.get(`/materiales/${materialId}/descargar`);
+      window.open(response.data.download_url, '_blank');
+    } catch (e) {
+      // FASE 1.1: Notificar error al usuario
+      toast.showFromError(e);
+    }
   };
 
   return {

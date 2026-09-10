@@ -6,6 +6,17 @@ import { apiNormalized, api } from '@/services/apiNormalized';
 import EntregaService from '@/services/EntregaService';
 import ParcialService from '@/services/ParcialService';
 
+// Composables - Fase 1: Pendiente migración completa
+// MOTIVO: useTareas usa api (raw axios) vs apiNormalized (wrapper),
+// diferente manejo de respuestas y errores que el template espera.
+// La migración completa requiere cambios sincronizados en template + script.
+// Por ahora se mantienen las funciones inline que funcionan correctamente.
+// import { useTareas } from '@/composables/tareas/useTareas';
+// import { useParciales } from '@/composables/useParciales';
+// import { useNotas } from '@/composables/notas/useNotas';
+// import { useMateriales } from '@/composables/useMateriales';
+// import { useEntregas } from '@/composables/useEntregas';
+
 // Componentes
 import ParticipantesSection from './components/ParticipantesSection.vue';
 import ModulosSection from './components/ModulosSection.vue';
@@ -93,9 +104,9 @@ const irAMaterial = (moduloId, material) => {
 };
 
 // Estado de subida de archivos
-const uploadingFile = ref(null);
 const fileInput = ref(null);
 
+// Materiales - Counts por módulo
 const materialCounts = ref({});
 
 // Modal de visor PDF
@@ -813,27 +824,6 @@ const handleEditTareaFileSelect = (event) => {
   if (file) {
     editingTareaArchivo.value = file;
   }
-};
-
-// Get estado color
-const getEstadoColor = (estado) => {
-  if (estado === 'vencida') return '#ef4444';
-  return '#f59e0b';
-};
-
-// Format fecha
-const formatFecha = (fecha) => {
-  if (!fecha) return '';
-  const d = new Date(fecha);
-  return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
-};
-
-// Format file size
-const formatFileSize = (bytes) => {
-  if (!bytes) return '0 B';
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
 };
 
 // Download archivo

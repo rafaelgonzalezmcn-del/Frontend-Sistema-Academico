@@ -107,11 +107,12 @@ const closeMenu = () => {
 <style scoped>
 .navbar {
   background: white;
-  padding: 12px 24px;
+  padding: 14px 32px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-bottom: 2px solid #1f2937;
   position: sticky;
   top: 0;
   z-index: 1000;
@@ -120,28 +121,42 @@ const closeMenu = () => {
 .navbar-brand {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: #1f2937;
   text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .navbar-brand:hover {
-  color: #42b883;
+  color: #374151;
+}
+
+.navbar-brand::before {
+  content: '🎓';
+  font-size: 22px;
 }
 
 .navbar-user {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   position: relative;
+  color: #1f2937;
+}
+
+.navbar-user > span:first-of-type {
+  font-weight: 500;
+  font-size: 14px;
 }
 
 .role-badge {
-  background: #42b883;
+  background: #1f2937;
   color: white;
-  padding: 4px 10px;
-  border-radius: 12px;
+  padding: 5px 12px;
+  border-radius: 20px;
   font-size: 12px;
-  text-transform: capitalize;
+  font-weight: 500;
 }
 
 .role-badge.role-admin {
@@ -162,21 +177,21 @@ const closeMenu = () => {
 }
 
 .dropdown-toggle {
-  background: none;
-  border: none;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
   transition: background 0.2s;
 }
 
 .dropdown-toggle:hover {
-  background: #f0f0f0;
+  background: #e5e7eb;
 }
 
 .dots {
-  font-size: 18px;
-  color: #666;
+  font-size: 20px;
+  color: #1f2937;
   font-weight: bold;
   display: block;
   line-height: 1;
@@ -187,10 +202,10 @@ const closeMenu = () => {
   top: 100%;
   right: 0;
   background: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  min-width: 180px;
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
   z-index: 1001;
   margin-top: 8px;
   overflow: hidden;
@@ -199,9 +214,9 @@ const closeMenu = () => {
 .dropdown-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  color: #333;
+  gap: 12px;
+  padding: 14px 18px;
+  color: #374151;
   text-decoration: none;
   font-size: 14px;
   border: none;
@@ -212,16 +227,16 @@ const closeMenu = () => {
 }
 
 .dropdown-item:hover {
-  background: #f5f5f5;
+  background: #f3f4f6;
 }
 
 .dropdown-item.logout {
-  color: #e74c3c;
-  border-top: 1px solid #eee;
+  color: #dc2626;
+  border-top: 1px solid #f3f4f6;
 }
 
 .dropdown-item.logout:hover {
-  background: #fee;
+  background: #fef2f2;
 }
 
 .icon {

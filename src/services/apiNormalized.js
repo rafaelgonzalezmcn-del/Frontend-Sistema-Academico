@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getData, getMessage, getMeta, getDownloadInfo } from '@/utils/responseHelper';
+import { toast } from './ToastService';
 
 /**
  * Instancia base de axios
@@ -9,7 +10,6 @@ const api = axios.create({
   baseURL: '/api',
   headers: {
     'Accept': 'application/json',
-    'Content-Type': 'application/json',
   },
   // F4-T3: Aceptar todos los statuses para manejar errores en interceptor
   validateStatus: function (status) {
@@ -33,22 +33,42 @@ api.interceptors.response.use(
     // Si hay respuesta del servidor
     if (error.response) {
       const status = error.response.status;
+      const message = error.response.data?.message;
       
       // 401: Token expirado o inválido
       if (status === 401) {
         localStorage.removeItem('token');
+        toast.error('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
         window.location.href = '/login';
       }
       
       // 403: No autorizado
       if (status === 403) {
-        console.warn('Acceso denegado:', error.response.data?.message);
+        toast.warning(message || 'No tienes permiso para realizar esta acción.');
+      }
+      
+      // 404: No encontrado
+      if (status === 404) {
+        toast.warning(message || 'El recurso solicitado no fue encontrado.');
       }
       
       // 409: Conflicto (ej: entrega duplicada)
       if (status === 409) {
-        console.warn('Conflicto:', error.response.data?.message);
+        toast.warning(message || 'Ya existe un registro similar.');
       }
+      
+      // 422: Error de validación
+      if (status === 422) {
+        toast.error(message || 'Los datos enviados no son válidos.');
+      }
+      
+      // 500+: Errores del servidor
+      if (status >= 500) {
+        toast.error('Error interno del servidor. Intenta más tarde.');
+      }
+    } else if (error.request) {
+      // Error de red - no hubo respuesta
+      toast.error('No se pudo conectar con el servidor. Verifica tu conexión.');
     }
     
     // Re-lanzar el error para que el código pueda manejarlo

@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import ParcialService from '@/services/ParcialService';
+import { toast } from '@/services/ToastService';
 
 export function useParciales() {
   const parciales = ref([]);
@@ -17,7 +18,8 @@ export function useParciales() {
       // El servicio ahora devuelve datos normalizados, no hace falta response.data.data
       parciales.value = response.data || [];
     } catch (e) {
-      console.error('Error cargando parciales:', e);
+      // FASE 1.1: Notificar error al usuario en lugar de solo console.error
+      toast.showFromError(e);
       parciales.value = [];
     } finally {
       loadingParciales.value = false;
@@ -34,7 +36,8 @@ export function useParciales() {
       // El servicio ahora devuelve datos normalizados
       parametros.value = response.data || [];
     } catch (e) {
-      console.error('Error cargando parámetros:', e);
+      // FASE 1.1: Notificar error al usuario en lugar de solo console.error
+      toast.showFromError(e);
       parametros.value = [];
     }
   };

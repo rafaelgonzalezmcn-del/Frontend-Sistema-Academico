@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { apiNormalized } from '@/services/apiNormalized';
+import { toast } from '@/services/ToastService';
 
 export function useMisNotas() {
   const misNotas = ref([]);
@@ -21,7 +22,6 @@ export function useMisNotas() {
       error.value = null;
       // Endpoint para obtener las notas del estudiante logueado
       const response = await apiNormalized.get(`/modulos/${moduloId}/notas/mis-notas`);
-      console.log('misNotas response:', response.data);
       // response.data ya tiene los datos normalizados
       misNotas.value = response.data || [];
       // nota_final es un campo especial en la respuesta raw
@@ -31,7 +31,8 @@ export function useMisNotas() {
       const parcialesResponse = await apiNormalized.get(`/modulos/${moduloId}/parciales`);
       parcialesData.value = parcialesResponse.data || [];
     } catch (e) {
-      console.error('Error cargando notas:', e);
+      // FASE 1.1: Notificar error al usuario en lugar de solo console.error
+      toast.showFromError(e);
       error.value = e.message || 'Error al cargar notas';
       misNotas.value = [];
       notaFinal.value = 0;
@@ -45,13 +46,12 @@ export function useMisNotas() {
     if (!parametroId) return;
     if (tareasCargadas.value[parametroId]) return;
     try {
-      console.log('Cargando tareas para parametro:', parametroId);
       const response = await apiNormalized.get(`/parametros/${parametroId}/tareas`);
-      console.log('Tareas response:', response.data);
       // response.data ya tiene los datos normalizados
       tareasCargadas.value[parametroId] = response.data || [];
     } catch (e) {
-      console.error('Error cargando tareas:', e);
+      // FASE 1.1: Notificar error al usuario
+      toast.showFromError(e);
       tareasCargadas.value[parametroId] = [];
     }
   };
