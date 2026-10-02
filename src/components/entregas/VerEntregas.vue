@@ -104,11 +104,12 @@ const cargarEntregas = async () => {
   try {
     const response = await EntregaService.obtenerEntregasTarea(props.tareaId);
     
-    // El backend devuelve { data: [...] }
-    if (response.data && response.data.data) {
-      entregas.value = response.data.data.map(entrega => ({
+    // apiNormalized ya entrega la lista en response.data
+    // (antes se leía response.data.data, que no existe, y la lista quedaba vacía)
+    if (Array.isArray(response.data)) {
+      entregas.value = response.data.map(entrega => ({
         ...entrega,
-        download_url: entrega.archivo_url || `${import.meta.env.VITE_API_URL || ''}/storage/${entrega.archivo}`
+        download_url: entrega.archivo_url // URL firmada generada por el backend
       }));
     } else if (response.data && response.data.message) {
       error.value = response.data.message;

@@ -80,7 +80,7 @@ const showBackButton = computed(() => true);
 const loadViewUserSelfie = async (userId) => {
   if (!userId) return null;
   try {
-    const response = await apiRaw.get(`/users/${userId}/selfie`, { responseType: 'blob' });
+    const response = await apiRaw.get(`/users/${userId}/selfie`, { responseType: 'blob', silencioso: true });
     if (response.data && response.data.size > 0) {
       return URL.createObjectURL(response.data);
     }

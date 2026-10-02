@@ -154,55 +154,51 @@ const router = createRouter({
   routes
 });
 
-router.beforeEach(async (to, from, next) => {
-  const { isAuthenticated, user, fetchUser, token } = useAuth();
-  
-  // Verificar si hay token en localStorage
-  const hasToken = !!localStorage.getItem('token');
-  
-  // Si el usuario no está cargado pero hay token, cargarlo
-  if (!user.value && hasToken) {
+// Página de inicio según el rol del usuario
+const inicioPorRol = (rol) => {
+  if (rol === 'admin') return '/admin';
+  if (rol === 'profesor') return '/profesor';
+  if (rol === 'estudiante') return '/estudiante';
+  return '/';
+};
+
+// Se usa el estilo "return" de Vue Router 4 (en vez de next()):
+// cada caso devuelve una sola vez, así no hay llamadas dobles ni redirecciones en bucle.
+router.beforeEach(async (to) => {
+  const { isAuthenticated, user, fetchUser } = useAuth();
+
+  // Si hay token pero el usuario no está cargado, cargarlo
+  if (!user.value && localStorage.getItem('token')) {
     await fetchUser();
   }
-  
-  // Redirigir a login si no está autenticado
+
+  const rol = user.value?.role?.name;
+
+  // Rutas protegidas sin sesión → login
   if (to.meta.requiresAuth && !isAuthenticated.value) {
-    next('/login');
+    return '/login';
   }
-  // Redirigir a dashboard apropiado según el rol
-  else if (to.path === '/login' && isAuthenticated.value) {
-    if (user.value?.role?.name === 'admin') {
-      next('/admin');
-    } else if (user.value?.role?.name === 'profesor') {
-      next('/profesor');
-    } else if (user.value?.role?.name === 'estudiante') {
-      next('/estudiante');
-    } else {
-      next('/');
-    }
+
+  // Ya autenticado intentando ir al login → su panel
+  if (to.path === '/login' && isAuthenticated.value) {
+    return inicioPorRol(rol);
   }
-  // Verificar permisos de admin
-  else if (to.meta.requiresAdmin && user.value?.role?.name !== 'admin') {
-    next('/admin');
+
+  // Ruta de un rol distinto al del usuario → su propio panel
+  // (antes: un no-admin en ruta de admin era enviado a /admin otra vez → bucle infinito)
+  const rolRequerido =
+    (to.meta.requiresAdmin && 'admin') ||
+    (to.meta.requiresTeacher && 'profesor') ||
+    (to.meta.requiresStudent && 'estudiante') ||
+    null;
+
+  if (rolRequerido && rol !== rolRequerido) {
+    const destino = inicioPorRol(rol);
+    // Evita redirigir a la misma ruta en la que ya estamos
+    return destino === to.path ? '/login' : destino;
   }
-  // Verificar permisos de profesor
-  else if (to.meta.requiresTeacher && user.value?.role?.name !== 'profesor') {
-    if (user.value?.role?.name === 'admin') {
-      next('/admin');
-    }
-    next('/');
-  }
-  // Verificar permisos de estudiante
-  else if (to.meta.requiresStudent && user.value?.role?.name !== 'estudiante') {
-    if (user.value?.role?.name === 'admin') {
-      next('/admin');
-    } else if (user.value?.role?.name === 'profesor') {
-      next('/profesor');
-    }
-    next('/');
-  } else {
-    next();
-  }
+
+  return true;
 });
 
 export default router;

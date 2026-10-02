@@ -14,9 +14,10 @@ const fetchLogs = async (page = 1) => {
     // El servicio ahora devuelve respuesta normalizada
     const response = await apiNormalized.get(`/activity-logs?page=${page}`);
     logs.value = response.data || [];
-    // Los metadatos de paginación vienen en response.raw.data
-    currentPage.value = response.raw?.data?.current_page || 1;
-    totalPages.value = response.raw?.data?.last_page || 1;
+    // Paginación en meta: { current_page, last_page, total, per_page }
+    // (antes se leía de response.raw.data y siempre quedaba en la página 1)
+    currentPage.value = response.meta?.current_page || 1;
+    totalPages.value = response.meta?.last_page || 1;
   } catch (err) {
     error.value = 'Error al cargar el registro de actividades';
     console.error(err);

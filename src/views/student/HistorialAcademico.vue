@@ -37,16 +37,12 @@ const loadHistory = async () => {
     const response = await apiNormalized.get(`/students/${props.studentId}/courses`);
     console.log('Response normalizada:', response);
     
-    // Con apiNormalized:
-    // - response.data = los datos normalizados (el array de cursos)
-    // - response.raw = la respuesta original de axios
-    // - response.raw.data = {data: [...], can_view_grades: true}
+    // Respuesta: { data: [cursos], meta: { can_view_grades } }
     
     courses.value = response.data || [];
     console.log('Courses asignados:', courses.value);
     
-    // can_view_grades viene en response.raw.data
-    canViewGrades.value = response.raw?.data?.can_view_grades || false;
+    canViewGrades.value = response.meta?.can_view_grades || false;
     console.log('canViewGrades:', canViewGrades.value);
     
   } catch (e) {

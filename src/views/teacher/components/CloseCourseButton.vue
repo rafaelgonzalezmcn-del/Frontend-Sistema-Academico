@@ -50,7 +50,7 @@ const closeCourse = async () => {
   try {
     const response = await apiNormalized.post(`/subjects/${props.subjectId}/sections/${props.sectionId}/close`);
     
-    success.value = response.data.message || 'Curso cerrado correctamente';
+    success.value = response.message || 'Curso cerrado correctamente';
     isClosed.value = true;
     
     emit('closed', response.data);

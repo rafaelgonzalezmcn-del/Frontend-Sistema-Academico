@@ -10,22 +10,20 @@ export function useAuth() {
   const login = async (credentials) => {
     // Login es un endpoint especial que puede no usar API Resource
     // Usamos api raw para mantener compatibilidad
+    // Respuesta: { message, data: { token, token_type, user } }
+    // Si las credenciales son incorrectas, axios lanza el error (401) y lo
+    // maneja el catch de Login.vue con error.response.data.message
     const response = await api.post('/login', credentials);
+    const { user: usuario, token: nuevoToken } = response.data.data;
 
-    // validateStatus: true en apiNormalized hace que 4xx/5xx no lancen error.
-    // Verificamos manualmente si la respuesta indica fallo.
-    if (response.status >= 400) {
-      throw response;
+    user.value = usuario;
+
+    if (nuevoToken) {
+      localStorage.setItem('token', nuevoToken);
+      token.value = nuevoToken;
     }
 
-    user.value = response.data.user;
-    
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-      token.value = response.data.token;
-    }
-    
-    return response.data;
+    return response.data.data;
   };
 
   const logout = async () => {
@@ -43,11 +41,10 @@ export function useAuth() {
     if (!token.value) return null;
     
     try {
-      // /me puede devolver el usuario directamente sin wrapper
-      // Usamos api raw para mantener compatibilidad
+      // Respuesta: { data: usuario }
       const response = await api.get('/me');
-      user.value = response.data;
-      return response.data;
+      user.value = response.data.data;
+      return response.data.data;
     } catch (error) {
       user.value = null;
       token.value = null;

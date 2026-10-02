@@ -43,7 +43,8 @@ const loadSelfie = async (userId) => {
   
   try {
     const response = await apiRaw.get(`/users/${userId}/selfie`, { 
-      responseType: 'blob' 
+      responseType: 'blob',
+      silencioso: true // no tener selfie es normal
     });
     if (response.data && response.data.size > 0) {
       const url = URL.createObjectURL(response.data);

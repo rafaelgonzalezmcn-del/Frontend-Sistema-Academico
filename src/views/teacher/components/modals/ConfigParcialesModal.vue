@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 const props = defineProps({
   show: Boolean,
@@ -10,7 +10,28 @@ const props = defineProps({
 const emit = defineEmits(['update:show', 'crearParcial', 'actualizarParcial', 'crearParametro', 'actualizarParametro']);
 
 const newParcialData = ref({ nombre: '', numero: 1, nota_maxima: 100 });
-const newParametroData = ref({ nombre: '', tipo: 'tareas', porcentaje: 0, nota_maxima_default: 100 });
+// Formulario "Agregar parámetro" independiente para cada parcial: { [parcialId]: {...} }
+// Nota máxima por defecto = la del parcial (10 o 100)
+const formVacio = (notaMaxima = 10) => ({ nombre: '', porcentaje: 0, nota_maxima_default: notaMaxima });
+const nuevosParametros = ref({});
+const formParametro = (parcialId) => nuevosParametros.value[parcialId] ?? formVacio();
+
+// Crear el formulario de cada parcial antes de renderizar (flush 'pre')
+watch(
+  () => props.parciales,
+  (lista) => {
+    for (const parcial of lista || []) {
+      if (!nuevosParametros.value[parcial.id]) {
+        nuevosParametros.value[parcial.id] = formVacio(parcial.nota_maxima || 10);
+      }
+    }
+  },
+  { immediate: true }
+);
+
+// Suma de porcentajes del parcial (máximo permitido: 100 %)
+const totalPorcentaje = (parcial) =>
+  (parcial.parametros || []).reduce((suma, p) => suma + (parseFloat(p.porcentaje) || 0), 0);
 
 const crearParcial = () => {
   if (!newParcialData.value.nombre) return;
@@ -18,10 +39,17 @@ const crearParcial = () => {
   newParcialData.value = { nombre: '', numero: 1, nota_maxima: 100 };
 };
 
+// Parámetro personalizado: el backend le asigna tipo "otro" y toma el parcial de la URL
 const crearParametro = (parcialId) => {
-  if (!newParametroData.value.nombre?.trim()) return;
-  emit('crearParametro', parcialId, { ...newParametroData.value });
-  newParametroData.value = { nombre: '', tipo: 'tareas', porcentaje: 0, nota_maxima_default: 100 };
+  const form = formParametro(parcialId);
+  if (!form.nombre?.trim()) return;
+  emit('crearParametro', parcialId, {
+    nombre: form.nombre.trim(),
+    porcentaje: form.porcentaje || 0,
+    nota_maxima_default: form.nota_maxima_default || 10
+  });
+  const parcial = props.parciales.find((p) => p.id === parcialId);
+  nuevosParametros.value[parcialId] = formVacio(parcial?.nota_maxima || 10);
 };
 
 const close = () => {
@@ -89,9 +117,68 @@ const close = () => {
                 @change="emit('actualizarParametro', param.id, param)" 
               />
             </div>
+
+            <!-- Total de porcentajes del parcial -->
+            <p class="total-porcentaje" :class="{ 'total-excedido': totalPorcentaje(parcial) > 100 }">
+              Total: {{ totalPorcentaje(parcial) }} % de 100 %
+            </p>
+
+            <!-- Agregar parámetro personalizado (ej.: Proyecto, Laboratorio) -->
+            <div class="agregar-parametro">
+              <input
+                v-model="nuevosParametros[parcial.id].nombre"
+                placeholder="Nuevo parámetro (ej: Proyecto)"
+                class="param-nombre-input"
+                @keyup.enter="crearParametro(parcial.id)"
+              />
+              <input
+                v-model.number="nuevosParametros[parcial.id].porcentaje"
+                type="number"
+                min="0"
+                max="100"
+                title="Porcentaje"
+                class="param-input"
+              />
+              <input
+                v-model.number="nuevosParametros[parcial.id].nota_maxima_default"
+                type="number"
+                min="1"
+                title="Nota máxima por defecto de sus tareas"
+                class="param-input"
+              />
+              <button
+                class="btn-primary btn-sm"
+                :disabled="!nuevosParametros[parcial.id]?.nombre?.trim()"
+                @click="crearParametro(parcial.id)"
+              >
+                Agregar
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.total-porcentaje {
+  margin: 8px 0 4px;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.total-excedido {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.agregar-parametro {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #cbd5e1;
+}
+</style>

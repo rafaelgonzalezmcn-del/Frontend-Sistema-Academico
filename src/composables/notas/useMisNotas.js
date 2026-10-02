@@ -24,8 +24,8 @@ export function useMisNotas() {
       const response = await apiNormalized.get(`/modulos/${moduloId}/notas/mis-notas`);
       // response.data ya tiene los datos normalizados
       misNotas.value = response.data || [];
-      // nota_final es un campo especial en la respuesta raw
-      notaFinal.value = response.raw?.data?.nota_final || 0;
+      // Respuesta: { data: [...], meta: { nota_final } }
+      notaFinal.value = response.meta?.nota_final || 0;
       
       // También cargar los parciales del módulo para tener la estructura completa
       const parcialesResponse = await apiNormalized.get(`/modulos/${moduloId}/parciales`);

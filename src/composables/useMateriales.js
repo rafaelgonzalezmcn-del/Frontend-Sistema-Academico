@@ -41,7 +41,7 @@ export function useMateriales() {
   const downloadMaterial = async (materialId) => {
     try {
       // Usa api raw (no normalizado) porque es un endpoint especial de descarga
-      const response = await api.get(`/materiales/${materialId}/descargar`);
+      const response = await apiNormalized.get(`/materiales/${materialId}/descargar`);
       window.open(response.data.download_url, '_blank');
     } catch (e) {
       // FASE 1.1: Notificar error al usuario

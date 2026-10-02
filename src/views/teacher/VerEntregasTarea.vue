@@ -308,10 +308,10 @@ const cargarEntregas = async () => {
     
     if (response.data) {
       // La respuesta normalizada tiene los datos en response.data
-      // Los campos especiales (tarea, resumen) vienen en response.raw.data
-      tarea.value = response.raw?.data?.tarea || response.data.tarea;
+      // Respuesta: { data: [estudiantes], meta: { tarea, resumen } }
+      tarea.value = response.meta?.tarea || null;
       estudiantes.value = response.data || [];
-      resumen.value = response.raw?.data?.resumen || response.data?.resumen;
+      resumen.value = response.meta?.resumen || null;
     }
   } catch (err) {
     console.error('Error al obtener entregas:', err);

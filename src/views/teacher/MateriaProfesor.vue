@@ -174,9 +174,9 @@ const fetchEntregasResumen = async (tareaId) => {
   try {
     // EntregaService ya devuelve respuesta normalizada
     const response = await EntregaService.obtenerEntregasTarea(tareaId);
-    // Los campos especiales vienen en response.raw.data
-    if (response.raw?.data?.resumen) {
-      entregasResumen.value[tareaId] = response.raw.data.resumen;
+    // Respuesta: { data: [...], meta: { tarea, resumen } }
+    if (response.meta?.resumen) {
+      entregasResumen.value[tareaId] = response.meta.resumen;
     }
   } catch (e) {
     console.error('Error fetching entregas resumen:', e);
@@ -380,7 +380,7 @@ const cargarNotas = async () => {
     const response = await ParcialService.obtenerResumenNotas(primerModuloId);
     notasData.value = response.data || [];
     // parciales es un campo especial en la respuesta raw
-    notasParciales.value = response.raw?.data?.parciales || [];
+    notasParciales.value = response.meta?.parciales || [];
   } catch (e) {
     console.error('Error cargando notas:', e);
     notasData.value = [];
@@ -830,7 +830,7 @@ const handleEditTareaFileSelect = (event) => {
 const downloadArchivo = async (tarea) => {
   try {
     // Usar api raw (no normalizado) para descargas
-    const response = await api.get(`/tareas/${tarea.id}/descargar`);
+    const response = await apiNormalized.get(`/tareas/${tarea.id}/descargar`);
     if (response.data.download_url) {
       window.open(response.data.download_url, '_blank');
     }
@@ -1174,7 +1174,7 @@ const viewMaterial = async (material) => {
   } else {
     // Si no es PDF, descargar - usar api raw (no normalizado) para descargas
     try {
-      const response = await api.get(`/materiales/${material.id}/descargar`);
+      const response = await apiNormalized.get(`/materiales/${material.id}/descargar`);
       window.open(response.data.download_url, '_blank');
     } catch (e) {
       console.error('Error downloading:', e);

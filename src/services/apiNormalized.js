@@ -11,10 +11,10 @@ const api = axios.create({
   headers: {
     'Accept': 'application/json',
   },
-  // F4-T3: Aceptar todos los statuses para manejar errores en interceptor
-  validateStatus: function (status) {
-    return true; 
-  },
+  // Se usa el validateStatus por defecto de axios (solo 2xx es éxito).
+  // Antes estaba en "return true": todas las respuestas, incluso 401/403/500,
+  // se trataban como exitosas, el interceptor de errores nunca se ejecutaba
+  // y los try/catch de las vistas nunca entraban al catch.
 });
 
 // Interceptor para agregar el token Bearer
@@ -30,16 +30,35 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Petición cancelada a propósito (AbortController): no es un error para el usuario
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
+
+    // Peticiones marcadas con { silencioso: true } manejan su propio error
+    // (ej.: cargar una selfie que no existe es normal y no debe mostrar aviso)
+    if (error.config?.silencioso) {
+      return Promise.reject(error);
+    }
+
     // Si hay respuesta del servidor
     if (error.response) {
       const status = error.response.status;
       const message = error.response.data?.message;
-      
+      const esLogin = error.config?.url?.includes('/login');
+
+      // 401 en el login = credenciales inválidas: lo muestra la pantalla de login
+      if (status === 401 && esLogin) {
+        return Promise.reject(error);
+      }
+
       // 401: Token expirado o inválido
       if (status === 401) {
         localStorage.removeItem('token');
         toast.error('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
-        window.location.href = '/login';
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
       }
       
       // 403: No autorizado

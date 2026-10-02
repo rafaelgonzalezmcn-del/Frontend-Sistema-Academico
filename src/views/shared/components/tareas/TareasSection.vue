@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { useTareas } from '@/composables/tareas/useTareas';
 import { useParciales } from '@/composables/useParciales';
 import api from '@/services/api';
+import { apiNormalized } from '@/services/apiNormalized';
 import { formatFecha, formatFileSize, getEstadoColor } from '@/utils/formatters';
 import SubirEntrega from '@/components/entregas/SubirEntrega.vue';
 
@@ -151,7 +152,7 @@ const verEntregasTarea = (tareaId) => {
 
 const downloadArchivo = async (tarea) => {
   try {
-    const response = await api.get(`/tareas/${tarea.id}/descargar`);
+    const response = await apiNormalized.get(`/tareas/${tarea.id}/descargar`);
     if (response.data.download_url) {
       window.open(response.data.download_url, '_blank');
     }

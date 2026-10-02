@@ -28,8 +28,8 @@ export function useNotas() {
       const response = await apiNormalized.get(`/modulos/${moduloId}/notas/resumen`);
       // response.data ya tiene los datos normalizados
       notasData.value = response.data || [];
-      // parciales es un campo especial en la respuesta raw
-      notasParciales.value = response.raw?.data?.parciales || [];
+      // Respuesta: { data: [notas por estudiante], meta: { parciales } }
+      notasParciales.value = response.meta?.parciales || [];
     } catch (e) {
       // FASE 1.1: Notificar error al usuario en lugar de solo console.error
       toast.showFromError(e);

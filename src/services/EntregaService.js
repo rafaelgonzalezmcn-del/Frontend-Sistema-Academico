@@ -21,7 +21,8 @@ const EntregaService = {
    * @returns {Promise} - Promesa con la respuesta normalizada
    */
   obtenerMiEntrega(tareaId) {
-    return apiNormalized.get(`/entregas/${tareaId}/mi-entrega`);
+    // 404 = el estudiante aún no entrega: es normal, no se muestra aviso
+    return apiNormalized.get(`/entregas/${tareaId}/mi-entrega`, { silencioso: true });
   },
 
   /**
@@ -40,7 +41,8 @@ const EntregaService = {
    * @returns {Promise} - Promesa con la respuesta raw (blob)
    */
   descargarEntrega(entregaId) {
-    return api.get(`/entregas/descargar/${entregaId}`);
+    // Respuesta: { data: { download_url, filename } }
+    return apiNormalized.get(`/entregas/descargar/${entregaId}`);
   },
 
   /**

@@ -183,7 +183,7 @@ const enrollStudent = async (studentId) => {
     if (status === 409) {
       confirmData.value = {
         student: enrollForm.value.availableStudents.find(s => s.id === studentId),
-        currentSection: data?.current_section
+        currentSection: data?.data?.current_section
       };
       showConfirmModal.value = true;
     } else {

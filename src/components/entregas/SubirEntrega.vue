@@ -371,7 +371,7 @@ const cargarMiEntrega = async () => {
       ...entrega,
       id: entrega.id,
       fecha_entrega: entrega.fecha_entrega,
-      download_url: entrega.archivo_url || `${import.meta.env.VITE_API_URL || ''}/storage/${entrega.archivo}`,
+      download_url: entrega.archivo_url, // URL firmada generada por el backend
       filename: entrega.archivo?.split('/').pop() || 'archivo'
     };
     return;
@@ -380,13 +380,16 @@ const cargarMiEntrega = async () => {
   // Fallback: intentar llamar al endpoint /mi-entrega (solo si es estudiante)
   try {
     const response = await EntregaService.obtenerMiEntrega(props.tareaId);
-    if (response.status === 200 && response.data.data) {
+    // apiNormalized ya entrega la entrega en response.data
+    // (antes se leía response.data.data, que no existe)
+    const entrega = response.data;
+    if (entrega) {
       miEntrega.value = {
-        ...response.data.data,
-        id: response.data.data.id,
-        fecha_entrega: response.data.data.fecha_entrega,
-        download_url: response.data.data.archivo_url || `${import.meta.env.VITE_API_URL || ''}/storage/${response.data.data.archivo}`,
-        filename: response.data.data.archivo?.split('/').pop() || 'archivo'
+        ...entrega,
+        id: entrega.id,
+        fecha_entrega: entrega.fecha_entrega,
+        download_url: entrega.archivo_url,
+        filename: entrega.archivo?.split('/').pop() || 'archivo'
       };
     } else {
       miEntrega.value = null;

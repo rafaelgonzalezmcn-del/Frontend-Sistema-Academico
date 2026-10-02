@@ -10,8 +10,8 @@ export function useEntregas() {
     try {
       const response = await EntregaService.obtenerEntregasTarea(tareaId);
       
-      // Usar response.raw.data para obtener la respuesta completa del backend
-      const data = response.raw?.data;
+      // Respuesta: { data: [...], meta: { tarea, resumen, mi_entrega?, ha_entregado? } }
+      const data = response.meta;
       
       if (!data) return null;
       

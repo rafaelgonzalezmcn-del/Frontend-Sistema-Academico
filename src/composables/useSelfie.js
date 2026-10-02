@@ -63,7 +63,7 @@ const cleanupAllBlobs = () => {
   // Cargar selfie del backend
   const checkSelfie = async () => {
     try {
-      const response = await apiRaw.get('/profile/selfie', { responseType: 'blob' });
+      const response = await apiRaw.get('/profile/selfie', { responseType: 'blob', silencioso: true });
       if (response.data && response.data.size > 0) {
         userHasSelfie.value = true;
         selfieBlobUrl.value = URL.createObjectURL(response.data);

@@ -235,7 +235,8 @@ const loadSelfie = async (userId) => {
   if (selfieUrls.value[userId]) return;
   try {
     const response = await apiRaw.get(`/users/${userId}/selfie`, { 
-      responseType: 'blob' 
+      responseType: 'blob',
+      silencioso: true // no tener selfie es normal
     });
     if (response.data && response.data.size > 0) {
       selfieUrls.value[userId] = URL.createObjectURL(response.data);
@@ -275,8 +276,9 @@ const toggleModulo = (moduloId) => {
 
 const verPDF = async (material) => {
   try {
-    // Usar api raw (no normalizado) para descargas
-    const response = await api.get(`/materiales/${material.id}/descargar`);
+    // Respuesta: { data: { download_url, filename } }
+    // (antes usaba "api", que no estaba importado en este archivo)
+    const response = await apiNormalized.get(`/materiales/${material.id}/descargar`);
     if (response.data.download_url) {
       const url = response.data.download_url;
       const filename = response.data.filename || material.nombre_archivo;

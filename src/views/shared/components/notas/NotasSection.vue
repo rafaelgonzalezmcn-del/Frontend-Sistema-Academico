@@ -145,14 +145,29 @@ const handleActualizarParcial = async (id, data) => {
   await cargarNotasProfesor(primerModuloId.value);
 };
 
+// Si el backend rechaza el cambio (ej.: los porcentajes superarían 100 %),
+// el interceptor muestra su mensaje y se recargan los parciales para que
+// el campo vuelva al valor guardado en lugar de mostrar uno inválido.
 const handleCrearParametro = async (parcialId, data) => {
-  await crearParametro(parcialId, data);
-  await cargarNotasProfesor(primerModuloId.value);
+  try {
+    await crearParametro(parcialId, data);
+  } catch (e) {
+    console.warn('Parámetro no creado:', e.response?.data?.message || e);
+  } finally {
+    await cargarParciales(primerModuloId.value);
+    await cargarNotasProfesor(primerModuloId.value);
+  }
 };
 
 const handleActualizarParametro = async (id, data) => {
-  await actualizarParametro(id, data);
-  await cargarNotasProfesor(primerModuloId.value);
+  try {
+    await actualizarParametro(id, data);
+  } catch (e) {
+    console.warn('Parámetro no actualizado:', e.response?.data?.message || e);
+  } finally {
+    await cargarParciales(primerModuloId.value);
+    await cargarNotasProfesor(primerModuloId.value);
+  }
 };
 
 const showConfigParcial = ref(false);
