@@ -959,3 +959,11 @@
 .btn-ver-entregas:hover {
   background: #2563eb;
 }
+
+/* Acciones del curso: acta de calificaciones + cerrar curso */
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}

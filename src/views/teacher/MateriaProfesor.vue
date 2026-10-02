@@ -25,6 +25,7 @@ import UploadFormModal from './components/modals/UploadFormModal.vue';
 import NotasSection from '@/views/shared/components/notas/NotasSection.vue';
 import TareasSection from '@/views/shared/components/tareas/TareasSection.vue';
 import CloseCourseButton from './components/CloseCourseButton.vue';
+import DescargarActa from '@/components/actas/DescargarActa.vue';
 
 // Estilos
 import './MateriaProfesor.css';
@@ -1216,6 +1217,10 @@ const goBack = () => {
       </div>
       <!-- Botón para cerrar curso (sección seleccionada) -->
       <div v-if="sectionId" class="header-actions">
+        <DescargarActa
+          :subject-id="materiaId"
+          :section-id="sectionId"
+        />
         <CloseCourseButton 
           :subject-id="materiaId"
           :section-id="sectionId"

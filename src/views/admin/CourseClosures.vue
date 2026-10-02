@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { apiNormalized as api } from '../../services/apiNormalized';
+import DescargarActa from '@/components/actas/DescargarActa.vue';
 
 const router = useRouter();
 
@@ -212,7 +213,7 @@ onMounted(fetchData);
               <span v-if="course.is_closed" class="status-badge closed">✅ Cerrado</span>
               <span v-else class="status-badge pending">⏳ Pendiente</span>
             </td>
-            <td>
+            <td class="acciones-curso">
               <button
                 v-if="!course.is_closed"
                 @click="openCloseModal(course)"
@@ -220,7 +221,12 @@ onMounted(fetchData);
               >
                 Cerrar curso
               </button>
-              <span v-else class="text-muted">—</span>
+              <!-- Acta de calificaciones (provisional si el curso sigue abierto) -->
+              <DescargarActa
+                :subject-id="course.subject_id"
+                :section-id="course.section_id"
+                compacto
+              />
             </td>
           </tr>
         </tbody>
@@ -281,6 +287,14 @@ onMounted(fetchData);
 </template>
 
 <style scoped>
+/* Cerrar curso + descargar acta en la misma celda */
+.acciones-curso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
 .course-closures-view { max-width: 1400px; margin: 0 auto; padding: 20px; }
 .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
 .page-header h2 { margin: 0 0 4px; font-size: 24px; color: #111827; }

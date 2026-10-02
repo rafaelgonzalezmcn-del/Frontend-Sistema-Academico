@@ -216,9 +216,10 @@ const fetchSchedule = async () => {
       Object.keys(data).forEach(dia => {
         if (data[dia] && Array.isArray(data[dia])) {
           data[dia].forEach(clase => {
-            // Extraer solo la hora del formato ISO
-            const startTime = clase.start_time ? clase.start_time.split('T')[1]?.substring(0, 5) : '';
-            const endTime = clase.end_time ? clase.end_time.split('T')[1]?.substring(0, 5) : '';
+            // El backend envía la hora local como "HH:mm"
+            // (antes enviaba una fecha ISO en UTC y aquí se mostraba 5 horas más tarde)
+            const startTime = clase.start_time ? String(clase.start_time).substring(0, 5) : '';
+            const endTime = clase.end_time ? String(clase.end_time).substring(0, 5) : '';
             
             scheduleArray.push({
               day: dia, // Mantener el día como viene del backend
