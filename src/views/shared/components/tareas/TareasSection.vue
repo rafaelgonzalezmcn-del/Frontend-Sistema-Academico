@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useTareas } from '@/composables/tareas/useTareas';
 import { useParciales } from '@/composables/useParciales';
 import api from '@/services/api';
@@ -27,6 +27,7 @@ const isProfesor = computed(() => props.mode === 'profesor');
 const isEstudiante = computed(() => props.mode === 'estudiante');
 
 const router = useRouter();
+const route = useRoute();
 
 const modulosRef = computed(() => props.modulos);
 
@@ -147,7 +148,12 @@ const handleDelete = async (tareaId, moduloId) => {
 };
 
 const verEntregasTarea = (tareaId) => {
-  router.push(`/profesor/materia/${props.materiaId}/tarea/${tareaId}`);
+  // Se conserva la sección para volver al mismo curso
+  if (route.params.cursoId) {
+    router.push(`/profesor/curso/${route.params.cursoId}/tarea/${tareaId}`);
+  } else {
+    router.push({ path: `/profesor/materia/${props.materiaId}/tarea/${tareaId}`, query: route.query });
+  }
 };
 
 const downloadArchivo = async (tarea) => {

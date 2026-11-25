@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import { apiNormalized, api } from '@/services/apiNormalized';
@@ -25,6 +25,7 @@ import UploadFormModal from './components/modals/UploadFormModal.vue';
 import NotasSection from '@/views/shared/components/notas/NotasSection.vue';
 import TareasSection from '@/views/shared/components/tareas/TareasSection.vue';
 import CloseCourseButton from './components/CloseCourseButton.vue';
+import CursoSidebar from '@/components/CursoSidebar.vue';
 import DescargarActa from '@/components/actas/DescargarActa.vue';
 
 // Estilos
@@ -36,12 +37,21 @@ const { user } = useAuth();
 
 const loading = ref(true);
 const error = ref('');
-const materiaId = computed(() => Number(route.params.id));
+// Ruta nueva: /profesor/curso/:cursoId. Ruta anterior: /profesor/materia/:id?section=
+const cursoId = computed(() => (route.params.cursoId ? Number(route.params.cursoId) : null));
+// Con la ruta nueva la materia se conoce al cargar los módulos del curso
+const materiaId = computed(() => Number(route.params.id) || materia.value?.id || null);
+// Curso (materia + sección) cuyo contenido se está mostrando
+const cursoActual = ref(null);
 const sectionId = computed(() => {
   // Leer sectionId de la query string (e.g., ?section=2)
   const sectionFromQuery = route.query.section;
   if (sectionFromQuery) {
     return Number(sectionFromQuery);
+  }
+  // Sin sección en la URL: usar la del curso que devolvió el backend
+  if (cursoActual.value?.section_id) {
+    return cursoActual.value.section_id;
   }
   // Fallback: usar la primera sección disponible
   return sections.value.length > 0 ? sections.value[0].id : null;
@@ -79,30 +89,6 @@ const savingEdit = ref(false);
 
 // Estado de módulos colapsados
 const modulosColapsados = ref({});
-
-// Sidebar
-const sidebarAbierto = ref(false);
-const modulosExpandidosSidebar = ref({});
-
-const toggleModuloSidebar = (moduloId) => {
-  modulosExpandidosSidebar.value[moduloId] = !modulosExpandidosSidebar.value[moduloId];
-};
-
-const irAMaterial = (moduloId, material) => {
-  // Cerrar sidebar en móvil
-  sidebarAbierto.value = false;
-  
-  // Primero expandir el módulo si está colapsado
-  modulosColapsados.value[moduloId] = false;
-  
-  // Scroll al módulo
-  setTimeout(() => {
-    const elemento = document.getElementById('modulo-' + moduloId);
-    if (elemento) {
-      elemento.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, 100);
-};
 
 // Estado de subida de archivos
 const fileInput = ref(null);
@@ -843,7 +829,12 @@ const downloadArchivo = async (tarea) => {
 
 // Navegar a ver entregas de una tarea
 const verEntregasTarea = (tareaId) => {
-  router.push(`/profesor/materia/${route.params.id}/tarea/${tareaId}`);
+  // Se conserva la sección para volver al mismo curso
+  if (cursoId.value) {
+    router.push(`/profesor/curso/${cursoId.value}/tarea/${tareaId}`);
+  } else {
+    router.push({ path: `/profesor/materia/${route.params.id}/tarea/${tareaId}`, query: route.query });
+  }
 };
 
 // Cargar datos
@@ -855,6 +846,14 @@ onMounted(async () => {
 // Cambiar pestaña
 const cambiarPestana = async (pestana) => {
   pestanaActiva.value = pestana;
+
+  // Al volver a "Curso" se recargan las tareas de cada módulo: pudieron
+  // crearse o editarse en la pestaña Tareas (que tiene su propia lista)
+  if (pestana === 'curso') {
+    for (const modulo of modulos.value) {
+      await fetchTareas(modulo.id);
+    }
+  }
   
   // Cargar participantes si se cambia a esa pestaña
   if (pestana === 'participantes' && participantes.value.length === 0) {
@@ -900,12 +899,24 @@ const fetchModulos = async () => {
   try {
     loading.value = true;
     // El servicio ahora devuelve respuesta normalizada
-    const response = await apiNormalized.get(`/materias/${materiaId.value}/modulos`);
+    // El aula pertenece a un curso (materia + sección): se envía la sección
+    // elegida para que el backend devuelva los módulos de ESE curso.
+    let response;
+    if (cursoId.value) {
+      response = await apiNormalized.get(`/cursos/${cursoId.value}/modulos`);
+    } else {
+      const seccionElegida = route.query.section ? Number(route.query.section) : null;
+      response = await apiNormalized.get(`/materias/${materiaId.value}/modulos`, {
+        params: seccionElegida ? { section_id: seccionElegida } : {}
+      });
+    }
     modulos.value = response.data || [];
     // La materia está en meta.materia según la respuesta de la API
     materia.value = response.meta?.materia || null;
     // Las secciones están en meta.sections
     sections.value = response.meta?.sections || [];
+    // Curso al que pertenecen estos módulos
+    cursoActual.value = response.meta?.curso || null;
     
     // Contar materiales por módulo
     modulos.value.forEach(modulo => {
@@ -926,11 +937,18 @@ const createModule = async () => {
   try {
     savingModule.value = true;
     // El servicio ahora devuelve respuesta normalizada
-    const response = await apiNormalized.post('/modulos', {
+    const datos = {
       nombre: newModuleName.value,
       descripcion: newModuleDescription.value.trim() || null,
-      materia_id: materiaId.value
-    });
+    };
+    // Con la ruta por curso el módulo se crea directamente en ese curso
+    const response = cursoId.value
+      ? await apiNormalized.post(`/cursos/${cursoId.value}/modulos`, datos)
+      : await apiNormalized.post('/modulos', {
+          ...datos,
+          materia_id: materiaId.value,
+          section_id: sectionId.value
+        });
     
     modulos.value.push(response.data);
     newModuleName.value = '';
@@ -1196,6 +1214,20 @@ const toggleModulo = (moduloId) => {
   modulosColapsados.value[moduloId] = !modulosColapsados.value[moduloId];
 };
 
+// ─── Menú lateral: índice del curso ──────────────────────────────
+const modulosSectionRef = ref(null);
+const moduloVisible = ref(null);
+
+// Bajar hasta un módulo o una tarea. Si se está en otra pestaña, se
+// cambia primero a "Curso", que es donde están los módulos.
+const irAContenido = async (tipo, id, moduloId) => {
+  if (pestanaActiva.value !== 'curso') {
+    await cambiarPestana('curso');
+    await nextTick();
+  }
+  modulosSectionRef.value?.irA(tipo, id, moduloId);
+};
+
 // Volver al dashboard
 const goBack = () => {
   router.push('/profesor');
@@ -1203,6 +1235,17 @@ const goBack = () => {
 </script>
 
 <template>
+  <!-- Menú lateral fijo con el índice del curso (como el del administrador) -->
+  <CursoSidebar
+    :titulo="materia?.name || ''"
+    :subtitulo="paraleloDisplay"
+    :modulos="modulos"
+    :tareas="tareas"
+    :modulo-visible="moduloVisible"
+    @ir-a="irAContenido"
+    @volver="goBack"
+  />
+
   <div class="materia-profesor">
     <!-- Header -->
     <div class="page-header">
@@ -1274,7 +1317,9 @@ const goBack = () => {
       
       <!-- PESTAÑA: CURSO (Módulos) -->
       <ModulosSection 
+        ref="modulosSectionRef"
         v-if="pestanaActiva === 'curso'"
+        @modulo-visible="moduloVisible = $event"
         :modulos="modulos"
         :modulos-colapsados="modulosColapsados"
         :loading="loading"
@@ -1288,6 +1333,9 @@ const goBack = () => {
         :saving-edit="savingEdit"
         :material-counts="materialCounts"
         :materia-id="materiaId"
+        :tareas="tareas"
+        :entregas-resumen="entregasResumen"
+        @ver-entregas="verEntregasTarea"
         @update:new-module-name="newModuleName = $event"
         @update:new-module-description="newModuleDescription = $event"
         @update:show-add-module="showAddModule = $event"

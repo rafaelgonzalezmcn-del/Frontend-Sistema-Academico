@@ -287,7 +287,12 @@ const getNotaClass = (nota, max = 100) => {
 };
 
 const volver = () => {
-  router.push(`/profesor/materia/${materiaId()}`);
+  // Se conserva la sección para volver al mismo curso
+  if (route.params.cursoId) {
+    router.push(`/profesor/curso/${route.params.cursoId}`);
+  } else {
+    router.push({ path: `/profesor/materia/${materiaId()}`, query: route.query });
+  }
 };
 
 const cargarTarea = async () => {

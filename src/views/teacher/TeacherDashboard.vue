@@ -64,8 +64,13 @@ const coursesDataGrouped = computed(() => {
   });
 });
 
-// Navegar a la materia con la sección
-const goToMateria = (subjectId, sectionId) => {
+// Entrar al aula de un curso (materia + sección).
+// Si el backend aún no envía el id del curso, se usa la ruta anterior por materia.
+const goToMateria = (subjectId, sectionId, cursoId = null) => {
+  if (cursoId) {
+    router.push(`/profesor/curso/${cursoId}`);
+    return;
+  }
   router.push({
     path: `/profesor/materia/${subjectId}`,
     query: { section: sectionId }
@@ -95,6 +100,7 @@ const subjectsGrouped = computed(() => {
       };
     }
     map[key].sections.push({
+      curso_id: course.curso_id,
       id: course.section_id,
       name: course.section_name,
       grade: course.grade
@@ -274,7 +280,7 @@ const getScheduleForCell = (day, hour) => {
             :key="`${course.subject_id}-${course.section_id}`"
             class="course-stat-row clickable"
             :class="getStatusClass(course.status, course.approved_percentage, course.failed_percentage)"
-            @click="goToMateria(course.subject_id, course.section_id)"
+            @click="goToMateria(course.subject_id, course.section_id, course.curso_id)"
           >
             <div class="course-col">{{ course.subject_name }}</div>
             <div class="section-col">{{ course.section_name }}</div>
@@ -340,7 +346,7 @@ const getScheduleForCell = (day, hour) => {
               v-for="section in selectedSubject?.sections" 
               :key="section.id"
               class="panel-section-item"
-              @click="goToMateria(selectedSubject.id, section.id); closeSectionsPanel()"
+              @click="goToMateria(selectedSubject.id, section.id, section.curso_id); closeSectionsPanel()"
             >
               <div class="section-info">
                 <span class="section-icon">📖</span>

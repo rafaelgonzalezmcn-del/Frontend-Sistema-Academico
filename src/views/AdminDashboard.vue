@@ -70,7 +70,7 @@ const metricCards = computed(() => [
     value: stats.value.pending_closures,
     icon: '⏳',
     color: stats.value.pending_closures > 0 ? 'red' : 'green',
-    link: '/admin/actividad',
+    link: '/admin/cierre-cursos',
     linkQuery: '',
   },
   {
@@ -107,7 +107,7 @@ const alerts = computed(() => {
       type: 'warning',
       icon: '⏳',
       message: `${stats.value.pending_closures} curso${stats.value.pending_closures > 1 ? 's' : ''} pendiente${stats.value.pending_closures > 1 ? 's' : ''} de cierre`,
-      link: '/admin/actividad',
+      link: '/admin/cierre-cursos',
     });
   }
   if (stats.value.full_sections > 0) {
@@ -144,29 +144,15 @@ const navigateTo = (card) => {
   router.push(card.link + card.linkQuery);
 };
 
-// ─── Navegación existente (mantener compatibilidad) ─────────────
-const primaryItems = [
-  { name: 'Usuarios', path: '/admin/usuarios', icon: '👥', description: 'Estudiantes y Profesores', count: computed(() => stats.value.active_students + stats.value.active_teachers) },
-];
-
-const secondaryItems = [
-  { name: 'Secciones', path: '/admin/secciones', icon: '🏫', description: 'Gestionar secciones', count: computed(() => stats.value.total_sections) },
-  { name: 'Horarios', path: '/admin/horarios', icon: '⏰', description: 'Gestionar horarios', count: ref(0) },
-];
-
-const tertiaryItems = [
-  { name: 'Matrícula', path: '/admin/matricula', icon: '📝', description: 'Matricular estudiantes', count: null },
-  { name: 'Cierre de Cursos', path: '/admin/cierre-cursos', icon: '🔒', description: 'Cerrar cursos pendientes', count: null },
-  { name: 'Promociones', path: '/admin/promociones', icon: '🎓', description: 'Promover estudiantes', count: computed(() => stats.value.promotion_eligible) },
-  { name: 'Años Lectivos', path: '/admin/anos-lectivos', icon: '📅', description: 'Gestionar años escolares', count: computed(() => stats.value.total_school_years || 0) },
-  { name: 'Grados', path: '/admin/grados', icon: '📚', description: 'Gestionar grados', count: computed(() => stats.value.total_grades) },
-  { name: 'Materias', path: '/admin/materias', icon: '📖', description: 'Gestionar materias', count: computed(() => stats.value.total_subjects || 0) },
-  { name: 'Actividad', path: '/admin/actividad', icon: '📜', description: 'Registro de acciones', count: computed(() => stats.value.total_activity_logs || 0) },
-];
+// La navegación está en el menú lateral (components/AdminSidebar.vue)
 </script>
 
 <template>
-  <div class="dashboard">
+  <div class="panel-inicio">
+    <header class="dashboard-header">
+      <h1>Panel principal</h1>
+      <p>Resumen del año lectivo y tareas pendientes</p>
+    </header>
 
     <!-- Año lectivo activo -->
     <div v-if="stats.active_school_year" class="active-year-banner">
@@ -184,7 +170,10 @@ const tertiaryItems = [
           :key="i"
           class="alert-item"
           :class="alert.type"
+          :role="alert.link ? 'link' : undefined"
+          :tabindex="alert.link ? 0 : undefined"
           @click="alert.link ? $router.push(alert.link) : null"
+          @keydown.enter="alert.link ? $router.push(alert.link) : null"
           :style="{ cursor: alert.link ? 'pointer' : 'default' }"
         >
           <span class="alert-icon">{{ alert.icon }}</span>
@@ -194,67 +183,18 @@ const tertiaryItems = [
       </div>
     </div>
 
-    <!-- Tarjetas de navegación (primero) -->
-    <div class="nav-cards-section">
-      <div class="nav-cards-grid">
-      <!-- Sección principal -->
-      <router-link
-        v-for="item in primaryItems"
-        :key="item.path"
-        :to="item.path"
-        class="nav-card"
-        active-class="active"
-      >
-        <span class="nav-card-icon">{{ item.icon }}</span>
-        <div class="nav-card-text">
-          <span class="nav-card-name">{{ item.name }}</span>
-          <span class="nav-card-desc">{{ item.description }}</span>
-        </div>
-        <div v-if="item.count?.value !== null" class="nav-card-badge">{{ item.count }}</div>
-      </router-link>
-
-      <!-- Sección secundaria -->
-      <router-link
-        v-for="item in secondaryItems"
-        :key="item.path"
-        :to="item.path"
-        class="nav-card"
-        active-class="active"
-      >
-        <span class="nav-card-icon">{{ item.icon }}</span>
-        <div class="nav-card-text">
-          <span class="nav-card-name">{{ item.name }}</span>
-          <span class="nav-card-desc">{{ item.description }}</span>
-        </div>
-        <div v-if="item.count?.value !== null" class="nav-card-badge">{{ item.count }}</div>
-      </router-link>
-
-      <!-- Sección terciaria -->
-      <router-link
-        v-for="item in tertiaryItems"
-        :key="item.path"
-        :to="item.path"
-        class="nav-card"
-        active-class="active"
-      >
-        <span class="nav-card-icon">{{ item.icon }}</span>
-        <div class="nav-card-text">
-          <span class="nav-card-name">{{ item.name }}</span>
-          <span class="nav-card-desc">{{ item.description }}</span>
-        </div>
-        <div v-if="item.count?.value !== null" class="nav-card-badge">{{ item.count }}</div>
-      </router-link>
-    </div>
-    </div>
-
-    <!-- Cards de métricas (después) -->
+    <!-- Métricas -->
+    <h2 class="seccion-titulo">Indicadores</h2>
     <div class="metrics-grid">
       <div
         v-for="(card, i) in metricCards"
         :key="i"
         class="metric-card"
         :class="[card.color, { clickable: card.link }]"
+        :role="card.link ? 'link' : undefined"
+        :tabindex="card.link ? 0 : undefined"
         @click="navigateTo(card)"
+        @keydown.enter="navigateTo(card)"
       >
         <span class="metric-icon">{{ card.icon }}</span>
         <div class="metric-info">
@@ -270,22 +210,58 @@ const tertiaryItems = [
       <button @click="fetchStats" class="btn-retry">Reintentar</button>
     </div>
 
-    <main class="main-content">
-      <router-view />
-    </main>
-
   </div>
 </template>
 
 <style scoped>
+/* ─── Contenedor y encabezado ───────────────────────────── */
+/* Ocupa todo el ancho junto al menú (antes usaba la clase global
+   .dashboard, que lo centraba con otro fondo y dejaba un espacio vacío) */
+.panel-inicio {
+  max-width: 1400px;
+  padding: 24px 32px 40px;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.dashboard-header p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.seccion-titulo {
+  margin: 28px 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.alert-item:focus-visible,
+.metric-card:focus-visible {
+  outline: 2px solid #047857;
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .panel-inicio {
+    padding: 16px;
+  }
+}
+
 /* ─── Año lectivo activo ────────────────────────────────── */
 .active-year-banner {
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
   border-radius: 8px;
   padding: 12px 20px;
-  margin-top: 24px;
-  margin-bottom: 24px;
+  margin-top: 20px;
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -299,7 +275,6 @@ const tertiaryItems = [
 /* ─── Alertas ───────────────────────────────────────────── */
 .alerts-section {
   margin-top: 24px;
-  padding: 0 24px;
 }
 
 .alerts-title {
@@ -309,116 +284,12 @@ const tertiaryItems = [
   font-weight: 600;
 }
 
-/* ─── Tarjetas de navegación unificadas ──────────────────────── */
-.nav-cards-section {
-  padding: 0 24px;
-  margin-bottom: 40px;
-  margin-top: 32px;
-}
-
-.nav-cards-header {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0 0 16px;
-}
-
-.nav-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
-}
-
-.nav-cards-header {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0 0 16px;
-}
-
-.nav-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
-  padding: 0 24px 24px;
-}
-
-.nav-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px 24px;
-  background: white;
-  border-radius: 16px;
-  text-decoration: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transition: all 0.25s ease;
-  min-height: 100px;
-  border-left: 5px solid #10b981;
-}
-
-.nav-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-}
-
-.nav-card.active {
-  border: 2px solid #10b981;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
-}
-
-.nav-card-icon {
-  font-size: 28px;
-  flex-shrink: 0;
-}
-
-.nav-card-text {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
-.nav-card-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.nav-card-desc {
-  font-size: 13px;
-  color: #6b7280;
-  margin-top: 2px;
-}
-
-.nav-card-badge {
-  background: linear-gradient(135deg, #10b981, #34d399);
-  color: white;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 12px;
-  min-width: 28px;
-  text-align: center;
-}
-
-.alert-item.success {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
-  color: #166534;
-}
-
-.alert-icon { font-size: 18px; }
-.alert-message { flex: 1; font-size: 14px; font-weight: 500; }
-.alert-arrow { font-size: 16px; opacity: 0.5; }
-
 /* ─── Métricas ──────────────────────────────────────────── */
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
-  margin-top: 40px;
-  padding: 0 24px;
+  margin-top: 0;
 }
 
 .metric-card {

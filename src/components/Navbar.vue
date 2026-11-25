@@ -2,6 +2,14 @@
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuth } from '../composables/useAuth';
+import { useSidebar } from '../composables/useSidebar';
+
+// conMenu: la pantalla actual tiene menú lateral (en celular se abre con ☰)
+defineProps({
+  conMenu: { type: Boolean, default: false },
+});
+
+const { abierto: menuLateralAbierto, alternar: alternarMenuLateral } = useSidebar();
 
 const router = useRouter();
 const route = useRoute();
@@ -75,9 +83,22 @@ const closeMenu = () => {
 
 <template>
   <nav class="navbar">
-    <router-link :to="homePath" class="navbar-brand">
-      {{ navbarTitle }}
-    </router-link>
+    <div class="navbar-izquierda">
+      <button
+        v-if="conMenu"
+        type="button"
+        class="boton-menu"
+        :aria-expanded="menuLateralAbierto ? 'true' : 'false'"
+        :aria-controls="route.path.startsWith('/admin') ? 'menu-administracion' : 'menu-curso'"
+        aria-label="Abrir o cerrar el menú"
+        @click="alternarMenuLateral"
+      >
+        ☰
+      </button>
+      <router-link :to="homePath" class="navbar-brand">
+        {{ navbarTitle }}
+      </router-link>
+    </div>
     
     <div class="navbar-user" v-if="user">
       <span>{{ user?.first_name }} {{ user?.last_name }}</span>
@@ -107,14 +128,19 @@ const closeMenu = () => {
 <style scoped>
 .navbar {
   background: white;
-  padding: 14px 32px;
+  height: var(--navbar-alto, 62px);
+  padding: 0 32px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border-bottom: 2px solid #1f2937;
-  position: sticky;
+  /* Fija (no "pegajosa"): así se mueve igual que el menú lateral, que
+     también es fijo, y no se separan al llegar arriba o abajo de la página */
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 1000;
 }
 
@@ -169,6 +195,52 @@ const closeMenu = () => {
 
 .role-badge.role-default {
   background: #6b7280;
+}
+
+/* Botón ☰ del menú lateral: solo en celulares y tabletas */
+.navbar-izquierda {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.boton-menu {
+  display: none;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 20px;
+  line-height: 1;
+  color: #1f2937;
+  cursor: pointer;
+}
+
+.boton-menu:focus-visible {
+  outline: 2px solid #047857;
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .navbar {
+    padding: 0 16px;
+  }
+
+  .boton-menu {
+    display: inline-block;
+  }
+}
+
+@media (max-width: 600px) {
+  /* En celular el título largo no cabe: se muestra solo el ícono */
+  .navbar-brand {
+    font-size: 0;
+  }
+
+  .navbar-user > span:first-of-type {
+    display: none;
+  }
 }
 
 /* Dropdown Styles */

@@ -24,7 +24,6 @@
         <div class="filter-group">
           <label>Año Lectivo</label>
           <select v-model="selectedYearId" @change="onYearChange">
-            <option :value="null">Todos</option>
             <option v-for="year in schoolYears" :key="year.id" :value="year.id">{{ year.name }}</option>
           </select>
         </div>
@@ -201,7 +200,16 @@
               <input v-model="form.end_time" type="time" required />
             </div>
           </div>
-          <div v-if="saveError" class="form-error">{{ saveError }}</div>
+          <!-- Un curso tiene un solo profesor: si cambia, se puede aplicar a todos sus horarios -->
+          <label v-if="cambiaProfesorDelCurso" class="opcion-curso">
+            <input type="checkbox" v-model="aplicarATodoElCurso" />
+            <span>
+              Cambiar el profesor en <strong>todos los horarios</strong> de este curso
+              ({{ horariosDelCurso }} horario{{ horariosDelCurso === 1 ? '' : 's' }}).
+              Si no lo marcas y el curso tiene más horarios, el cambio se rechazará.
+            </span>
+          </label>
+          <div v-if="saveError" class="form-error" role="alert">{{ saveError }}</div>
           <div class="modal-footer">
             <button type="button" @click="closeModal" class="btn-cancel">Cancelar</button>
             <button type="submit" class="btn-primary">Guardar</button>
@@ -241,6 +249,20 @@ const error = ref('');
 const showModal = ref(false);
 const editingItem = ref(null);
 const saveError = ref('');
+const aplicarATodoElCurso = ref(true);
+
+// ¿Se está cambiando el profesor de un horario que pertenece a un curso?
+const cambiaProfesorDelCurso = computed(() =>
+  !!editingItem.value?.curso_id
+  && form.value.teacher_id
+  && Number(form.value.teacher_id) !== Number(editingItem.value.teacher_id)
+  && Number(form.value.subject_id) === Number(editingItem.value.subject_id)
+  && Number(form.value.section_id) === Number(editingItem.value.section_id)
+);
+
+const horariosDelCurso = computed(() =>
+  schedules.value.filter(s => s.curso_id && s.curso_id === editingItem.value?.curso_id).length
+);
 
 const form = ref({
   teacher_id: '',
@@ -259,7 +281,7 @@ const fetchData = async () => {
   error.value = '';
   try {
     const results = await Promise.allSettled([
-      api.get('/class-schedules'),
+      Promise.resolve(null), // los horarios se cargan aparte, por año (fetchSchedules)
       api.get('/teachers'),
       api.get('/subjects'),
       api.get('/sections?per_page=100'),
@@ -269,7 +291,6 @@ const fetchData = async () => {
 
     const [sRes, tRes, subRes, secRes, yrRes, grRes] = results.map(r => r.value);
 
-    schedules.value = sRes?.data || [];
     teachers.value = tRes?.data || [];
     subjects.value = subRes?.data || [];
     sections.value = (secRes?.data || []).map(s => ({
@@ -279,12 +300,29 @@ const fetchData = async () => {
     }));
     schoolYears.value = yrRes?.data || [];
     grades.value = grRes?.data || [];
+
+    // Por defecto, el año lectivo activo
+    if (!selectedYearId.value) {
+      const activo = schoolYears.value.find(y => y.active) || schoolYears.value[0];
+      selectedYearId.value = activo?.id ?? null;
+    }
+    await fetchSchedules();
   } catch (e) {
     console.error('Error loading schedules data', e);
     error.value = 'Error al cargar horarios';
   } finally {
     loading.value = false;
   }
+};
+
+// Horarios del año elegido: el backend los devuelve TODOS (antes solo llegaban 15)
+const fetchSchedules = async () => {
+  if (!selectedYearId.value) {
+    schedules.value = [];
+    return;
+  }
+  const res = await api.get('/class-schedules', { params: { school_year_id: selectedYearId.value } });
+  schedules.value = res?.data || [];
 };
 
 // ═══════════════════════════════════════════
@@ -309,10 +347,15 @@ const filteredSections = computed(() => {
   return result;
 });
 
-const onYearChange = () => {
+const onYearChange = async () => {
   selectedGradeId.value = null;
   if (!filteredSections.value.some(s => s.id === selectedSectionId.value)) {
     selectedSectionId.value = null;
+  }
+  try {
+    await fetchSchedules();
+  } catch {
+    error.value = 'Error al cargar horarios';
   }
 };
 
@@ -517,6 +560,7 @@ const getSubjectName = (id) => {
 // ═══════════════════════════════════════════
 const openModal = (item = null) => {
   saveError.value = '';
+  aplicarATodoElCurso.value = true;
   editingItem.value = item;
   if (item) {
     form.value = {
@@ -550,7 +594,12 @@ const saveItem = async () => {
   saveError.value = '';
   try {
     const data = { ...form.value };
-    if (editingItem.value) {
+    if (editingItem.value && cambiaProfesorDelCurso.value && aplicarATodoElCurso.value) {
+      // 1) Cambia el profesor del curso y de todos sus horarios
+      await api.put(`/cursos/${editingItem.value.curso_id}/profesor`, { teacher_id: data.teacher_id });
+      // 2) Guarda el resto de cambios de este horario (día, horas)
+      await api.put(`/class-schedules/${editingItem.value.id}`, data);
+    } else if (editingItem.value) {
       await api.put(`/class-schedules/${editingItem.value.id}`, data);
     } else {
       await api.post('/class-schedules', data);
@@ -1180,5 +1229,24 @@ onMounted(fetchData);
   .schedule-grid-wrapper {
     overflow-x: auto;
   }
+}
+
+.opcion-curso {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 4px 0 12px;
+  padding: 10px 12px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #78350f;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.opcion-curso input {
+  margin-top: 2px;
 }
 </style>

@@ -117,6 +117,53 @@ const closeModal = () => {
   closeResult.value = null;
 };
 
+// ─── Reabrir un curso cerrado ─────────────────────────────────────
+// Anula las notas oficiales para que el profesor pueda corregir.
+// El backend exige un motivo (mínimo 10 caracteres) y lo deja registrado.
+const MOTIVO_MINIMO = 10;
+const showReopenModal = ref(false);
+const reopenCourse = ref(null);
+const reopenReason = ref('');
+const reopening = ref(false);
+const reopenError = ref('');
+
+const motivoValido = computed(() => reopenReason.value.trim().length >= MOTIVO_MINIMO);
+
+const openReopenModal = (course) => {
+  if (!course.is_closed || !course.curso_id) return;
+  reopenCourse.value = course;
+  reopenReason.value = '';
+  reopenError.value = '';
+  showReopenModal.value = true;
+};
+
+const closeReopenModal = () => {
+  if (reopening.value) return;
+  showReopenModal.value = false;
+  reopenCourse.value = null;
+};
+
+const confirmReopen = async () => {
+  if (!reopenCourse.value || !motivoValido.value) return;
+  reopening.value = true;
+  reopenError.value = '';
+
+  try {
+    await api.post(`/cursos/${reopenCourse.value.curso_id}/reabrir`, {
+      motivo: reopenReason.value.trim(),
+    }, { silencioso: true }); // el error se muestra dentro de la ventana
+    showReopenModal.value = false;
+    reopenCourse.value = null;
+    await fetchData();
+  } catch (e) {
+    reopenError.value = e.response?.data?.message
+      || Object.values(e.response?.data?.errors || {}).flat().join(', ')
+      || 'No se pudo reabrir el curso';
+  } finally {
+    reopening.value = false;
+  }
+};
+
 onMounted(fetchData);
 </script>
 
@@ -221,6 +268,13 @@ onMounted(fetchData);
               >
                 Cerrar curso
               </button>
+              <button
+                v-else-if="course.curso_id"
+                @click="openReopenModal(course)"
+                class="btn-secondary btn-sm"
+              >
+                Reabrir
+              </button>
               <!-- Acta de calificaciones (provisional si el curso sigue abierto) -->
               <DescargarActa
                 :subject-id="course.subject_id"
@@ -283,10 +337,60 @@ onMounted(fetchData);
         </div>
       </div>
     </div>
+
+    <!-- Reabrir curso -->
+    <div
+      v-if="showReopenModal"
+      class="modal-overlay"
+      @click.self="closeReopenModal"
+      @keydown.esc="closeReopenModal"
+    >
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="titulo-reabrir">
+        <div class="modal-header">
+          <h3 id="titulo-reabrir">Reabrir curso</h3>
+          <button @click="closeReopenModal" class="close-btn" aria-label="Cerrar ventana">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="course-info">
+            <p><strong>Materia:</strong> {{ reopenCourse?.subject_name }}</p>
+            <p><strong>Sección:</strong> {{ reopenCourse?.grade_name }} — {{ reopenCourse?.section_name }}</p>
+            <p><strong>Año:</strong> {{ reopenCourse?.school_year_name }}</p>
+          </div>
+
+          <div class="warning-box">
+            Las notas oficiales de este curso se anularán para que el profesor pueda corregir.
+            Al cerrarlo de nuevo se recalculan. Las notas anteriores y el motivo quedan en el registro de actividad.
+          </div>
+
+          <div class="form-group">
+            <label for="motivo-reapertura">Motivo de la reapertura</label>
+            <textarea
+              id="motivo-reapertura"
+              v-model="reopenReason"
+              rows="3"
+              maxlength="500"
+              placeholder="Ej.: el profesor registró mal la nota de una tarea"
+            ></textarea>
+            <small v-if="reopenReason && !motivoValido" class="hint-text">
+              Escribe al menos {{ MOTIVO_MINIMO }} caracteres.
+            </small>
+          </div>
+
+          <div v-if="reopenError" class="result-error" role="alert">{{ reopenError }}</div>
+        </div>
+        <div class="modal-footer">
+          <button @click="closeReopenModal" class="btn-cancel" :disabled="reopening">Cancelar</button>
+          <button @click="confirmReopen" class="btn-danger" :disabled="reopening || !motivoValido">
+            {{ reopening ? 'Reabriendo...' : 'Reabrir curso' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.hint-text { display: block; margin-top: 4px; font-size: 12px; color: #b45309; }
 /* Cerrar curso + descargar acta en la misma celda */
 .acciones-curso {
   display: flex;

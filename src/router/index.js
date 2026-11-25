@@ -46,6 +46,19 @@ const routes = [
     meta: { requiresAuth: true, requiresTeacher: true }
   },
   {
+    // Aula de un curso (materia + sección). Es la ruta que usa el panel del profesor.
+    path: '/profesor/curso/:cursoId',
+    name: 'CursoProfesor',
+    component: MateriaProfesor,
+    meta: { requiresAuth: true, requiresTeacher: true }
+  },
+  {
+    path: '/profesor/curso/:cursoId/tarea/:tareaId',
+    name: 'CursoEntregasTarea',
+    component: VerEntregasTarea,
+    meta: { requiresAuth: true, requiresTeacher: true }
+  },
+  {
     path: '/profesor/materia/:materiaId/tarea/:tareaId',
     name: 'VerEntregasTarea',
     component: VerEntregasTarea,

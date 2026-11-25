@@ -967,3 +967,18 @@
   align-items: center;
   gap: 10px;
 }
+
+/* Con el menú lateral del curso, el aula empieza pegada al menú y usa el
+   ancho disponible (el CSS global la centraba y le sumaba un margen de
+   un índice antiguo, lo que dejaba un espacio vacío a la izquierda). */
+.contenido-con-menu .materia-profesor {
+  margin: 0;
+  max-width: 1400px;
+  padding: 24px 32px;
+}
+
+@media (max-width: 600px) {
+  .contenido-con-menu .materia-profesor {
+    padding: 16px;
+  }
+}
